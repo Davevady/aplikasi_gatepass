@@ -16,9 +16,6 @@ return new class extends Migration
             $table->string('title');
             $table->string('slug');
             $table->string('description');
-            $table->json('access');
-            $table->string('color');
-            $table->string('icon');
             $table->timestamps();
             $table->softDeletes();
         });
