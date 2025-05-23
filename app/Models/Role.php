@@ -14,9 +14,6 @@ class Role extends Model
         'title',
         'slug',
         'description',
-        'access',
-        'color',
-        'icon',
     ];
 
     public function users()

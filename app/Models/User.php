@@ -26,8 +26,6 @@ class User extends Authenticatable
         'password',
         'phone',
         'address',
-        'photo',
-        'is_active',
     ];
 
     /**
@@ -58,5 +56,10 @@ class User extends Authenticatable
     public function departement()
     {
         return $this->belongsTo(Departemen::class);
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
     }
 }

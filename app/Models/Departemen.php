@@ -14,15 +14,15 @@ class Departemen extends Model
         'name',
         'code',
         'description',
-        'head_of_department',
-        'email',
-        'phone',
-        'address',
-        'is_active',
     ];
 
     public function users()
     {
         return $this->hasMany(User::class);
+    }
+
+    public function requestKaryawans()
+    {
+        return $this->hasMany(RequestKaryawan::class);
     }
 }
