@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\RequestKaryawanController;
+use App\Http\Controllers\RequestDriverController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,7 +19,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 
-Route::get('/', [DashboardController::class, 'landingPage'])->name('landing');
+Route::resource('request-karyawan', RequestKaryawanController::class);
+Route::resource('request-driver', RequestDriverController::class);
 Route::get('/login', [UserController::class, 'login'])->name('login');
 Route::post('/login', [UserController::class, 'authLogin'])->name('auth.login');
 Route::get('/register', [UserController::class, 'register'])->name('register');
@@ -25,4 +29,6 @@ Route::get('/logout', [UserController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::resource('notifications', NotificationController::class);
+    Route::get('/notification/{id}/show', [NotificationController::class, 'showAndRead'])->name('notification.showAndRead');
 });
