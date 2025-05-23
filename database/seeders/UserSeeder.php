@@ -14,18 +14,15 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Buat akun untuk departement 1
+        // Super Admin (2 user)
         User::create([
             'departemen_id' => 1,
             'role_id' => 1,
-            'name' => 'Admin',
-            'email' => 'admin@gmail.com',
+            'name' => 'Super Admin 1',
+            'email' => 'superadmin@gmail.com',
             'password' => Hash::make('password'),
-            'role_id' => 1,
-            'address' => 'Jl. raya',
-            'phone' => '081234567890',
-            'photo' => 'uploads/users/default.png',
-            'is_active' => 1,
+            'address' => 'Jl. Raya No. 1',
+            'phone' => '081234567891',
         ]);
     }
 }

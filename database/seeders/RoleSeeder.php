@@ -17,9 +17,36 @@ class RoleSeeder extends Seeder
             'title' => 'Super Admin',
             'slug' => 'super-admin',
             'description' => 'Super Admin',
-            'access' => json_encode(['role', 'users', 'departement', 'gatepass']),
-            'color' => '#FF0000',
-            'icon' => 'fas fa-crown',
+        ]);
+
+        Role::create([
+            'title' => 'Lead',
+            'slug' => 'lead',
+            'description' => 'Lead',
+        ]);
+
+        Role::create([
+            'title' => 'HR GA',
+            'slug' => 'hr-ga',
+            'description' => 'HR GA',
+        ]);
+
+        Role::create([
+            'title' => 'Admin',
+            'slug' => 'admin',
+            'description' => 'Admin',
+        ]);
+
+        Role::create([
+            'title' => 'Head Unit',
+            'slug' => 'head-unit',
+            'description' => 'Head Unit',
+        ]);
+
+        Role::create([
+            'title' => 'Security',
+            'slug' => 'security',
+            'description' => 'Security',
         ]);
     }
 }

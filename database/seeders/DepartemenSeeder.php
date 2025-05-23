@@ -17,22 +17,36 @@ class DepartemenSeeder extends Seeder
             'name' => 'Admin',
             'code' => 'ADM',
             'description' => 'Departemen Administrasi',
-            'head_of_department' => 'John Doe',
-            'email' => 'admin@company.com',
-            'phone' => '081234567890',
-            'address' => 'Jl. Raya No. 1',
-            'is_active' => true,
         ]);
 
         Departemen::create([
             'name' => 'Production',
             'code' => 'PRD',
             'description' => 'Departemen Produksi',
-            'head_of_department' => 'Jane Smith',
-            'email' => 'production@company.com',
-            'phone' => '089876543210',
-            'address' => 'Jl. Industri No. 2',
-            'is_active' => true,
+        ]);
+
+        Departemen::create([
+            'name' => 'Human Resources',
+            'code' => 'HRD',
+            'description' => 'Departemen Sumber Daya Manusia',
+        ]);
+
+        Departemen::create([
+            'name' => 'Finance',
+            'code' => 'FIN',
+            'description' => 'Departemen Keuangan',
+        ]);
+
+        Departemen::create([
+            'name' => 'Logistics',
+            'code' => 'LOG',
+            'description' => 'Departemen Logistik',
+        ]);
+
+        Departemen::create([
+            'name' => 'Security',
+            'code' => 'SEC',
+            'description' => 'Departemen Security',
         ]);
     }
 }
