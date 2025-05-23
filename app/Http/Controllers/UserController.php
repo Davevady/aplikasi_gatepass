@@ -92,7 +92,7 @@ class UserController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect()->route('landing')->with('success', 'Berhasil logout!');
+        return redirect()->route('login')->with('success', 'Berhasil logout!');
     }
 
     /**
