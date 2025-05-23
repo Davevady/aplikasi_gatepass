@@ -40,86 +40,60 @@
                     </a>
                 </li>
                 <li class="nav-item dropdown hidden-caret">
-                    <a class="nav-link dropdown-toggle" href="#" id="messageDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="fa fa-envelope"></i>
-                    </a>
-                    <ul class="dropdown-menu messages-notif-box animated fadeIn" aria-labelledby="messageDropdown">
-                        <li>
-                            <div class="dropdown-title d-flex justify-content-between align-items-center">
-                                Pesan                                    
-                                <a href="#" class="small">Tandai semua telah dibaca</a>
-                            </div>
-                        </li>
-                        <li>
-                            <div class="message-notif-scroll scrollbar-outer">
-                                <div class="notif-center">
-                                    <a href="#">
-                                        <div class="notif-img"> 
-                                            <img src="../assets/img/profile1.jpg" alt="Foto Profil">
-                                        </div>
-                                        <div class="notif-content">
-                                            <span class="subject">Admin SISIK</span>
-                                            <span class="block">
-                                                Surat izin keluar Anda telah disetujui
-                                            </span>
-                                            <span class="time">5 menit yang lalu</span> 
-                                        </div>
-                                    </a>
-                                    <a href="#">
-                                        <div class="notif-img"> 
-                                            <img src="../assets/img/profile2.jpg" alt="Foto Profil">
-                                        </div>
-                                        <div class="notif-content">
-                                            <span class="subject">HRD</span>
-                                            <span class="block">
-                                                Mohon lengkapi dokumen pendukung
-                                            </span>
-                                            <span class="time">12 menit yang lalu</span> 
-                                        </div>
-                                    </a>
-                                </div>
-                            </div>
-                        </li>
-                        <li>
-                            <a class="see-all" href="javascript:void(0);">Lihat semua pesan<i class="fa fa-angle-right"></i> </a>
-                        </li>
-                    </ul>
-                </li>
-                <li class="nav-item dropdown hidden-caret">
                     <a class="nav-link dropdown-toggle" href="#" id="notifDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fa fa-bell"></i>
-                        <span class="notification">4</span>
+                        @php
+                            $unreadCount = \App\Models\Notification::where('user_id', auth()->id())
+                                ->where('is_read', false)
+                                ->count();
+                        @endphp
+                        @if($unreadCount > 0)
+                            <span class="notification">{{ $unreadCount }}</span>
+                        @endif
                     </a>
                     <ul class="dropdown-menu notif-box animated fadeIn" aria-labelledby="notifDropdown">
                         <li>
-                            <div class="dropdown-title">Ada 4 notifikasi baru</div>
+                            <div class="dropdown-title d-flex justify-content-between align-items-center">
+                                Notifikasi
+                                <a href="#" class="small" onclick="markAllAsRead()">Tandai semua telah dibaca</a>
+                            </div>
                         </li>
                         <li>
                             <div class="notif-scroll scrollbar-outer">
                                 <div class="notif-center">
-                                    <a href="#">
-                                        <div class="notif-icon notif-primary"> <i class="fa fa-check-circle"></i> </div>
-                                        <div class="notif-content">
-                                            <span class="block">
-                                                Surat izin keluar Anda telah disetujui
-                                            </span>
-                                            <span class="time">5 menit yang lalu</span> 
+                                    @php
+                                        $notifications = \App\Models\Notification::where('user_id', auth()->id())
+                                            ->orderBy('created_at', 'desc')
+                                            ->take(5)
+                                            ->get();
+                                    @endphp
+                                    
+                                    @forelse($notifications as $notification)
+                                        <a href="javascript:void(0);" class="notification-item {{ $notification->is_read ? 'read' : 'unread' }}" 
+                                           onclick="showNotifDetail({{ $notification->id }})">
+                                            <div class="notif-icon {{ $notification->type === 'driver' ? 'notif-warning' : ($notification->type === 'karyawan' ? 'notif-info' : 'notif-primary') }}">
+                                                <i class="fa {{ $notification->type === 'driver' ? 'fa-truck' : ($notification->type === 'karyawan' ? 'fa-user' : 'fa-clock') }}"></i>
+                                            </div>
+                                            <div class="notif-content">
+                                                <span class="block">
+                                                    {{ $notification->title }}
+                                                </span>
+                                                <span class="time">{{ $notification->created_at->diffForHumans() }}</span>
+                                                @if(!$notification->is_read)
+                                                    <span class="badge badge-primary badge-pill">Baru</span>
+                                                @endif
+                                            </div>
+                                        </a>
+                                    @empty
+                                        <div class="text-center p-3">
+                                            <span>Tidak ada notifikasi</span>
                                         </div>
-                                    </a>
-                                    <a href="#">
-                                        <div class="notif-icon notif-success"> <i class="fa fa-clock"></i> </div>
-                                        <div class="notif-content">
-                                            <span class="block">
-                                                Surat izin keluar menunggu persetujuan
-                                            </span>
-                                            <span class="time">12 menit yang lalu</span> 
-                                        </div>
-                                    </a>
+                                    @endforelse
                                 </div>
                             </div>
                         </li>
                         <li>
-                            <a class="see-all" href="javascript:void(0);">Lihat semua notifikasi<i class="fa fa-angle-right"></i> </a>
+                            <a class="see-all" href="{{ route('notifications.index') }}">Lihat semua notifikasi<i class="fa fa-angle-right"></i></a>
                         </li>
                     </ul>
                 </li>
@@ -159,3 +133,46 @@
     </nav>
     <!-- End Navbar -->
 </div>
+
+<!-- Modal Notifikasi -->
+<div class="modal fade" id="notifModal" tabindex="-1" role="dialog" aria-labelledby="notifModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="notifModalLabel">Detail Notifikasi</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <h6 id="notifTitle"></h6>
+        <p id="notifMessage"></p>
+        <small id="notifTime" class="text-muted"></small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showNotifDetail(id) {
+    $.ajax({
+        url: '/notification/' + id + '/show',
+        method: 'GET',
+        success: function(data) {
+            $('#notifTitle').text(data.title);
+            $('#notifMessage').text(data.message);
+            $('#notifTime').text(data.created_at);
+            $('#notifModal').modal('show');
+            
+            // Update UI to mark notification as read
+            $('.notification-item[onclick*="' + id + '"]').removeClass('unread').addClass('read');
+            $('.notification-item[onclick*="' + id + '"] .badge').remove();
+        },
+        error: function() {
+            alert('Gagal mengambil data notifikasi');
+        }
+    });
+}
+</script>
+
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap4.min.css">

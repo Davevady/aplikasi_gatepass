@@ -9,16 +9,29 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto align-items-center">
                 @if(!Request::is('login'))
+                    @if(auth()->check())
+                        <li class="nav-item ms-lg-2">
+                            <a class="btn btn-outline-light rounded-pill px-4 py-2 fw-semibold shadow-sm me-2" href="{{ route('dashboard') }}">
+                                <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                            </a>
+                        </li>
+                    @else
+                        <li class="nav-item ms-lg-2">
+                            <a class="btn btn-outline-light rounded-pill px-4 py-2 fw-semibold shadow-sm me-2" href="{{ route('login') }}">
+                                <i class="bi bi-box-arrow-in-right me-1"></i> Login
+                            </a>
+                        </li>
+                    @endif
+                @endif
+                @if(Request::is('login'))
                 <li class="nav-item ms-lg-2">
-                    <a class="btn btn-outline-light rounded-pill px-4 py-2 fw-semibold shadow-sm me-2" href="{{ route('login') }}">
-                        <i class="bi bi-box-arrow-in-right me-1"></i> Masuk
+                    <a class="btn btn-outline-light rounded-pill px-4 py-2 fw-semibold shadow-sm me-2" href="{{ route('request-karyawan.create') }}">
+                        <i class="bi bi-person-walking me-1"></i> Izin Keluar Karyawan
                     </a>
                 </li>
-                @endif
-                @if(!Request::is('/'))
                 <li class="nav-item ms-lg-2">
-                    <a class="btn btn-light rounded-pill px-4 py-2 fw-semibold shadow-sm" href="{{ route('landing') }}">
-                        <i class="bi bi-person-walking me-1"></i> Izin Keluar
+                    <a class="btn btn-outline-light rounded-pill px-4 py-2 fw-semibold shadow-sm me-2" href="{{ route('request-driver.create') }}">
+                        <i class="bi bi-truck me-1"></i> Izin Keluar Driver
                     </a>
                 </li>
                 @endif

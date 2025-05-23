@@ -51,31 +51,24 @@
                         </span>
                         <h4 class="text-section">Menu</h4>
                     </li>
-                    @php
-                        $access = json_decode(Auth::user()->role->access);
-                    @endphp
-                    <li class="nav-item {{ request()->is('gatepass*') ? 'active' : '' }}">
+                    <li class="nav-item {{ request()->is('request-karyawan*') || request()->is('request-driver*') ? 'active' : '' }}">
                         <a data-toggle="collapse" href="#submenuGatepass">
                             <i class="fas fa-id-card"></i>
                             <p>Gate Pass</p>
                             <span class="caret"></span>
                         </a>
-                        <div class="collapse {{ request()->is('gatepass*') ? 'show' : '' }}" id="submenuGatepass">
+                        <div class="collapse {{ request()->is('request-karyawan*') || request()->is('request-driver*') ? 'show' : '' }}" id="submenuGatepass">
                             <ul class="nav nav-collapse">
-                                @if (in_array('gatepass', $access))
-                                <li data-name="Permohonan" class="{{ request()->is('gatepass/request*') ? 'active' : '' }}">
-                                    <a href="/gatepass/request"> 
-                                        <span class="sub-item">Permohonan</span>
+                                <li data-name="Permohonan Karyawan" class="{{ request()->is('request-karyawan*') ? 'active' : '' }}">
+                                    <a href="/request-karyawan"> 
+                                        <span class="sub-item">Permohonan Karyawan</span>
                                     </a>
                                 </li>
-                                @endif
-                                @if (in_array('gatepass', $access))
-                                <li data-name="Persetujuan" class="{{ request()->is('gatepass/approval*') ? 'active' : '' }}">
-                                    <a href="/gatepass/approval"> 
-                                        <span class="sub-item">Persetujuan</span>
+                                <li data-name="Permohonan Driver" class="{{ request()->is('request-driver*') ? 'active' : '' }}">
+                                    <a href="/request-driver"> 
+                                        <span class="sub-item">Permohonan Driver</span>
                                     </a>
                                 </li>
-                                @endif
                             </ul>
                         </div>
                     </li>
@@ -87,27 +80,21 @@
                         </a>
                         <div class="collapse {{ request()->is('users*') || request()->is('role*') || request()->is('departement*') ? 'show' : '' }}" id="submenuMaster">
                             <ul class="nav nav-collapse">
-                                @if (in_array('role', $access))
                                 <li data-name="Hak Akses" class="{{ request()->is('role*') ? 'active' : '' }}">
                                     <a href="/role"> 
                                         <span class="sub-item">Hak Akses</span>
                                     </a>
                                 </li>
-                                @endif
-                                @if (in_array('departement', $access))
                                 <li data-name="Data Departemen" class="{{ request()->is('departement*') ? 'active' : '' }}">
                                     <a href="/departement"> 
                                         <span class="sub-item">Data Departemen</span>
                                     </a>
                                 </li>
-                                @endif
-                                @if (in_array('users', $access))
                                 <li data-name="Data Pengguna" class="{{ request()->is('users*') ? 'active' : '' }}">
                                     <a href="/users"> 
                                         <span class="sub-item">Data Pengguna</span>
                                     </a>
                                 </li>
-                                @endif
                             </ul>
                         </div>
                     </li>

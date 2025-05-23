@@ -49,8 +49,8 @@
 								<h5 class="text-white op-7 mb-2">Selamat datang kembali di Sistem Surat Izin Keluar</h5>
 							</div>
 							<div class="ml-md-auto py-2 py-md-0">
-								<a href="/gatepass/request" class="btn btn-light btn-border btn-round mr-2">Permohonan Izin</a>
-								<a href="/gatepass/approval" class="btn btn-primary btn-round">Persetujuan Izin</a>
+								<a href="{{ route('request-karyawan.create') }}" class="btn btn-light btn-border btn-round mr-2">Permohonan Karyawan</a>
+								<a href="{{ route('request-driver.create') }}" class="btn btn-light btn-border btn-round">Permohonan Driver</a>
 							</div>
 						</div>
 					</div>
@@ -70,7 +70,7 @@
                                         <div class="col-7 col-stats">
                                             <div class="numbers">
                                                 <p class="card-category">Total Permohonan</p>
-                                                <h4 class="card-title">156</h4>
+                                                <h4 class="card-title">{{ $totalRequest }}</h4>
                                             </div>
                                         </div>
                                     </div>
@@ -89,7 +89,7 @@
                                         <div class="col-7 col-stats">
                                             <div class="numbers">
                                                 <p class="card-category">Disetujui</p>
-                                                <h4 class="card-title">120</h4>
+                                                <h4 class="card-title">{{ $totalDisetujui }}</h4>
                                             </div>
                                         </div>
                                     </div>
@@ -108,7 +108,7 @@
                                         <div class="col-7 col-stats">
                                             <div class="numbers">
                                                 <p class="card-category">Ditolak</p>
-                                                <h4 class="card-title">15</h4>
+                                                <h4 class="card-title">{{ $totalDitolak }}</h4>
                                             </div>
                                         </div>
                                     </div>
@@ -127,7 +127,7 @@
                                         <div class="col-7 col-stats">
                                             <div class="numbers">
                                                 <p class="card-category">Menunggu</p>
-                                                <h4 class="card-title">21</h4>
+                                                <h4 class="card-title">{{ $totalMenunggu }}</h4>
                                             </div>
                                         </div>
                                     </div>
@@ -174,31 +174,61 @@
                                                     <th>Nama</th>
                                                     <th>Tanggal</th>
                                                     <th>Jam Keluar</th>
+                                                    <th>Jam Kembali</th>
                                                     <th>Status</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr>
-                                                    <td>1</td>
-                                                    <td>Budi Santoso</td>
-                                                    <td>15 Maret 2024</td>
-                                                    <td>13:00 - 15:00</td>
-                                                    <td><span class="badge badge-warning">Menunggu</span></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>2</td>
-                                                    <td>Ani Wijaya</td>
-                                                    <td>14 Maret 2024</td>
-                                                    <td>10:00 - 12:00</td>
-                                                    <td><span class="badge badge-success">Disetujui</span></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>3</td>
-                                                    <td>Dedi Kurniawan</td>
-                                                    <td>14 Maret 2024</td>
-                                                    <td>09:00 - 11:00</td>
-                                                    <td><span class="badge badge-danger">Ditolak</span></td>
-                                                </tr>
+                                                @foreach($latestKaryawanRequests as $request)
+                                                    <tr>
+                                                        <td>{{ $loop->iteration }}</td>
+                                                        <td>{{ $request->nama }}</td>
+                                                        <td>{{ \Carbon\Carbon::parse($request->created_at)->format('d M Y') }}</td>
+                                                        <td>{{ $request->jam_out }}</td>
+                                                        <td>{{ $request->jam_in }}</td>
+                                                        <td>
+                                                            @php
+                                                                $status = 'warning';
+                                                                $text = 'Menunggu';
+                                                                
+                                                                if($request->acc_lead == 3 || $request->acc_hr_ga == 3 || $request->acc_security_out == 3 || $request->acc_security_in == 3) {
+                                                                    $status = 'danger';
+                                                                    $text = 'Ditolak';
+                                                                } 
+                                                                elseif($request->acc_lead == 2 && $request->acc_hr_ga == 2 && $request->acc_security_out == 2 && $request->acc_security_in == 2) {
+                                                                    $status = 'success';
+                                                                    $text = 'Disetujui';
+                                                                }
+                                                            @endphp
+                                                            <span class="badge badge-{{ $status }}">{{ $text }}</span>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                                @foreach($latestDriverRequests as $request)
+                                                    <tr>
+                                                        <td>{{ $loop->iteration + count($latestKaryawanRequests) }}</td>
+                                                        <td>{{ $request->nama_driver }}</td>
+                                                        <td>{{ \Carbon\Carbon::parse($request->created_at)->format('d M Y') }}</td>
+                                                        <td>{{ $request->jam_out }}</td>
+                                                        <td>{{ $request->jam_in }}</td>
+                                                        <td>
+                                                            @php
+                                                                $status = 'warning';
+                                                                $text = 'Menunggu';
+                                                                
+                                                                if($request->acc_admin == 3 || $request->acc_head_unit == 3 || $request->acc_security_out == 3 || $request->acc_security_in == 3) {
+                                                                    $status = 'danger';
+                                                                    $text = 'Ditolak';
+                                                                } 
+                                                                elseif($request->acc_admin == 2 && $request->acc_head_unit == 2 && $request->acc_security_out == 2 && $request->acc_security_in == 2) {
+                                                                    $status = 'success';
+                                                                    $text = 'Disetujui';
+                                                                }
+                                                            @endphp
+                                                            <span class="badge badge-{{ $status }}">{{ $text }}</span>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
                                             </tbody>
                                         </table>
                                     </div>
@@ -231,9 +261,41 @@
             data: {
                 labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
                 datasets: [{
-                    label: 'Jumlah Permohonan',
-                    data: [12, 19, 15, 25, 22, 30, 28, 35, 40, 33, 27, 20],
+                    label: 'Permohonan Karyawan',
+                    data: [
+                        {{ $monthlyData['karyawan'][1] }},
+                        {{ $monthlyData['karyawan'][2] }},
+                        {{ $monthlyData['karyawan'][3] }},
+                        {{ $monthlyData['karyawan'][4] }},
+                        {{ $monthlyData['karyawan'][5] }},
+                        {{ $monthlyData['karyawan'][6] }},
+                        {{ $monthlyData['karyawan'][7] }},
+                        {{ $monthlyData['karyawan'][8] }},
+                        {{ $monthlyData['karyawan'][9] }},
+                        {{ $monthlyData['karyawan'][10] }},
+                        {{ $monthlyData['karyawan'][11] }},
+                        {{ $monthlyData['karyawan'][12] }}
+                    ],
                     borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Permohonan Driver',
+                    data: [
+                        {{ $monthlyData['driver'][1] }},
+                        {{ $monthlyData['driver'][2] }},
+                        {{ $monthlyData['driver'][3] }},
+                        {{ $monthlyData['driver'][4] }},
+                        {{ $monthlyData['driver'][5] }},
+                        {{ $monthlyData['driver'][6] }},
+                        {{ $monthlyData['driver'][7] }},
+                        {{ $monthlyData['driver'][8] }},
+                        {{ $monthlyData['driver'][9] }},
+                        {{ $monthlyData['driver'][10] }},
+                        {{ $monthlyData['driver'][11] }},
+                        {{ $monthlyData['driver'][12] }}
+                    ],
+                    borderColor: 'rgb(255, 99, 132)',
                     tension: 0.1
                 }]
             },
@@ -254,7 +316,7 @@
             data: {
                 labels: ['Disetujui', 'Ditolak', 'Menunggu'],
                 datasets: [{
-                    data: [120, 15, 21],
+                    data: [{{ $totalDisetujui }}, {{ $totalDitolak }}, {{ $totalMenunggu }}],
                     backgroundColor: [
                         'rgb(75, 192, 192)',
                         'rgb(255, 99, 132)',
