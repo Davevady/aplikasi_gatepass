@@ -14,51 +14,34 @@ class RequestDriverController extends Controller
     public function index()
     {
         $title = 'Permohonan Izin Keluar Driver';
-        $requestDrivers = RequestDriver::all();
         
-        // Menghitung total request berdasarkan status dengan urutan persetujuan
+        // Mengambil data yang masih memiliki status menunggu (value 1)
+        $requestDrivers = RequestDriver::where(function($query) {
+            $query->where('acc_admin', 1)
+                ->orWhere('acc_head_unit', 1)
+                ->orWhere('acc_security_out', 1)
+                ->orWhere('acc_security_in', 1);
+        })->get();
+        
+        // Menghitung total request berdasarkan status
         $totalMenunggu = RequestDriver::where(function($query) {
-            $query->where('acc_admin', 1) // Admin belum menyetujui
-                ->orWhere(function($q) {
-                    $q->where('acc_admin', 2) // Admin sudah menyetujui
-                      ->where('acc_head_unit', 1); // Head Unit belum menyetujui
-                })
-                ->orWhere(function($q) {
-                    $q->where('acc_admin', 2) // Admin sudah menyetujui
-                      ->where('acc_head_unit', 2) // Head Unit sudah menyetujui
-                      ->where('acc_security_out', 1); // Security Out belum menyetujui
-                })
-                ->orWhere(function($q) {
-                    $q->where('acc_admin', 2) // Admin sudah menyetujui
-                      ->where('acc_head_unit', 2) // Head Unit sudah menyetujui
-                      ->where('acc_security_out', 2) // Security Out sudah menyetujui
-                      ->where('acc_security_in', 1); // Security In belum menyetujui
-                });
+            $query->where('acc_admin', 1)
+                ->orWhere('acc_head_unit', 1)
+                ->orWhere('acc_security_out', 1)
+                ->orWhere('acc_security_in', 1);
         })->count();
             
-        $totalDisetujui = RequestDriver::where('acc_admin', 2) // Admin menyetujui
-            ->where('acc_head_unit', 2) // Head Unit menyetujui
-            ->where('acc_security_out', 2) // Security Out menyetujui
-            ->where('acc_security_in', 2) // Security In menyetujui
+        $totalDisetujui = RequestDriver::where('acc_admin', 2)
+            ->where('acc_head_unit', 2)
+            ->where('acc_security_out', 2)
+            ->where('acc_security_in', 2)
             ->count();
             
         $totalDitolak = RequestDriver::where(function($query) {
-            $query->where('acc_admin', 3) // Admin menolak
-                ->orWhere(function($q) {
-                    $q->where('acc_admin', 2) // Admin menyetujui
-                      ->where('acc_head_unit', 3); // Head Unit menolak
-                })
-                ->orWhere(function($q) {
-                    $q->where('acc_admin', 2) // Admin menyetujui
-                      ->where('acc_head_unit', 2) // Head Unit menyetujui
-                      ->where('acc_security_out', 3); // Security Out menolak
-                })
-                ->orWhere(function($q) {
-                    $q->where('acc_admin', 2) // Admin menyetujui
-                      ->where('acc_head_unit', 2) // Head Unit menyetujui
-                      ->where('acc_security_out', 2) // Security Out menyetujui
-                      ->where('acc_security_in', 3); // Security In menolak
-                });
+            $query->where('acc_admin', 3)
+                ->orWhere('acc_head_unit', 3)
+                ->orWhere('acc_security_out', 3)
+                ->orWhere('acc_security_in', 3);
         })->count();
             
         $totalRequest = RequestDriver::count();
@@ -150,6 +133,79 @@ class RequestDriverController extends Controller
             }
 
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Handle the approval of request
+     */
+    public function accRequest($id, $role_id)
+    {
+        try {
+            // Ambil data request driver
+            $requestDriver = RequestDriver::find($id);
+
+            // Cek apakah data request driver ada
+            if (!$requestDriver) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data Request Driver tidak ditemukan'
+                ], 404);
+            }
+
+            // Update status persetujuan berdasarkan role
+            switch ($role_id) {
+                case 4: // Checker
+                    $requestDriver->acc_admin = 2;
+                    $notificationTitle = 'Disetujui Checker';
+                    $notificationMessage = 'telah disetujui oleh Checker dan menunggu persetujuan Head Unit';
+                    break;
+                case 5: // Head Unit
+                    $requestDriver->acc_head_unit = 2;
+                    $notificationTitle = 'Disetujui Head Unit';
+                    $notificationMessage = 'telah disetujui oleh Head Unit dan menunggu persetujuan Security Out';
+                    break;
+                case 6: // Security
+                    if ($requestDriver->acc_security_out == 1) {
+                        $requestDriver->acc_security_out = 2;
+                        $notificationTitle = 'Disetujui Security Out';
+                        $notificationMessage = 'telah disetujui oleh Security Out dan menunggu driver kembali';
+                    } else {
+                        $requestDriver->acc_security_in = 2;
+                        $notificationTitle = 'Disetujui Security In';
+                        $notificationMessage = 'telah disetujui oleh Security In dan permohonan selesai';
+                    }
+                    break;
+                default:
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Role tidak valid'
+                    ], 400);
+            }
+
+            $requestDriver->save();
+
+            // Buat notifikasi
+            Notification::create([
+                'user_id' => 1, // ID admin
+                'title' => 'Permohonan Izin Driver ' . $requestDriver->nama_ekspedisi . ' ' . $notificationTitle,
+                'message' => 'Permohonan izin driver ' . $requestDriver->nama_ekspedisi . 
+                           ' dengan nopol ' . $requestDriver->nopol_kendaraan . 
+                           ' ' . $notificationMessage,
+                'type' => 'driver',
+                'status' => 'pending',
+                'is_read' => false
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Permohonan izin driver berhasil disetujui'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
         }
     }
 

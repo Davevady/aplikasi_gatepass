@@ -6,6 +6,7 @@ use App\Models\RequestKaryawan;
 use App\Models\Departemen;
 use App\Models\Notification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class RequestKaryawanController extends Controller
 {
@@ -15,54 +16,119 @@ class RequestKaryawanController extends Controller
     public function index()
     {
         $title = 'Permohonan Izin Keluar Karyawan';
-        $departemens = Departemen::with('requestKaryawans')->get();
         
-        // Menghitung total request berdasarkan status dengan urutan persetujuan
-        $totalMenunggu = RequestKaryawan::where(function($query) {
-            $query->where('acc_lead', 1) // Lead belum menyetujui
-                ->orWhere(function($q) {
-                    $q->where('acc_lead', 2) // Lead sudah menyetujui
-                      ->where('acc_hr_ga', 1); // HR GA belum menyetujui
-                })
-                ->orWhere(function($q) {
-                    $q->where('acc_lead', 2) // Lead sudah menyetujui
-                      ->where('acc_hr_ga', 2) // HR GA sudah menyetujui
-                      ->where('acc_security_out', 1); // Security Out belum menyetujui
-                })
-                ->orWhere(function($q) {
-                    $q->where('acc_lead', 2) // Lead sudah menyetujui
-                      ->where('acc_hr_ga', 2) // HR GA sudah menyetujui
-                      ->where('acc_security_out', 2) // Security Out sudah menyetujui
-                      ->where('acc_security_in', 1); // Security In belum menyetujui
+        // Jika user adalah HR GA (role_id = 3) atau Super Admin (role_id = 1) atau Security (role_id = 6), tampilkan semua departemen
+        if (auth()->user()->role_id == 3 || auth()->user()->role_id == 1 || auth()->user()->role_id == 6) {
+            $departemens = Departemen::with('requestKaryawans')->get();
+            
+            // Menghitung total request berdasarkan status dengan urutan persetujuan untuk semua departemen
+            $totalMenunggu = RequestKaryawan::where(function($query) {
+                $query->where('acc_lead', 1) // Lead belum menyetujui
+                    ->orWhere(function($q) {
+                        $q->where('acc_lead', 2) // Lead sudah menyetujui
+                          ->where('acc_hr_ga', 1); // HR GA belum menyetujui
+                    })
+                    ->orWhere(function($q) {
+                        $q->where('acc_lead', 2) // Lead sudah menyetujui
+                          ->where('acc_hr_ga', 2) // HR GA sudah menyetujui
+                          ->where('acc_security_out', 1); // Security Out belum menyetujui
+                    })
+                    ->orWhere(function($q) {
+                        $q->where('acc_lead', 2) // Lead sudah menyetujui
+                          ->where('acc_hr_ga', 2) // HR GA sudah menyetujui
+                          ->where('acc_security_out', 2) // Security Out sudah menyetujui
+                          ->where('acc_security_in', 1); // Security In belum menyetujui
+                    });
+            })->count();
+                    
+            $totalDisetujui = RequestKaryawan::where('acc_lead', 2) // Lead menyetujui
+                ->where('acc_hr_ga', 2) // HR GA menyetujui
+                ->where('acc_security_out', 2) // Security Out menyetujui
+                ->where('acc_security_in', 2) // Security In menyetujui
+                ->count();
+                    
+            $totalDitolak = RequestKaryawan::where(function($query) {
+                $query->where('acc_lead', 3) // Lead menolak
+                    ->orWhere(function($q) {
+                        $q->where('acc_lead', 2) // Lead menyetujui
+                          ->where('acc_hr_ga', 3); // HR GA menolak
+                    })
+                    ->orWhere(function($q) {
+                        $q->where('acc_lead', 2) // Lead menyetujui
+                          ->where('acc_hr_ga', 2) // HR GA menyetujui
+                          ->where('acc_security_out', 3); // Security Out menolak
+                    })
+                    ->orWhere(function($q) {
+                        $q->where('acc_lead', 2) // Lead menyetujui
+                          ->where('acc_hr_ga', 2) // HR GA menyetujui
+                          ->where('acc_security_out', 2) // Security Out menyetujui
+                          ->where('acc_security_in', 3); // Security In menolak
+                    });
+            })->count();
+                    
+            $totalRequest = RequestKaryawan::count();
+        } else {
+            // Untuk role lain, tampilkan hanya departemen user tersebut
+            $departemens = Departemen::with(['requestKaryawans' => function($query) {
+                $query->where(function($q) {
+                    $q->where('acc_lead', 1)
+                      ->orWhere('acc_hr_ga', 1)
+                      ->orWhere('acc_security_out', 1)
+                      ->orWhere('acc_security_in', 1);
                 });
-        })->count();
-            
-        $totalDisetujui = RequestKaryawan::where('acc_lead', 2) // Lead menyetujui
-            ->where('acc_hr_ga', 2) // HR GA menyetujui
-            ->where('acc_security_out', 2) // Security Out menyetujui
-            ->where('acc_security_in', 2) // Security In menyetujui
-            ->count();
-            
-        $totalDitolak = RequestKaryawan::where(function($query) {
-            $query->where('acc_lead', 3) // Lead menolak
-                ->orWhere(function($q) {
-                    $q->where('acc_lead', 2) // Lead menyetujui
-                      ->where('acc_hr_ga', 3); // HR GA menolak
-                })
-                ->orWhere(function($q) {
-                    $q->where('acc_lead', 2) // Lead menyetujui
-                      ->where('acc_hr_ga', 2) // HR GA menyetujui
-                      ->where('acc_security_out', 3); // Security Out menolak
-                })
-                ->orWhere(function($q) {
-                    $q->where('acc_lead', 2) // Lead menyetujui
-                      ->where('acc_hr_ga', 2) // HR GA menyetujui
-                      ->where('acc_security_out', 2) // Security Out menyetujui
-                      ->where('acc_security_in', 3); // Security In menolak
-                });
-        })->count();
-            
-        $totalRequest = RequestKaryawan::count();
+            }])
+            ->where('id', auth()->user()->departemen_id)
+            ->get();
+            // Menghitung total request berdasarkan status dengan urutan persetujuan
+            $totalMenunggu = RequestKaryawan::where('departemen_id', auth()->user()->departemen_id)
+                ->where(function($query) {
+                    $query->where('acc_lead', 1) // Lead belum menyetujui
+                        ->orWhere(function($q) {
+                            $q->where('acc_lead', 2) // Lead sudah menyetujui
+                              ->where('acc_hr_ga', 1); // HR GA belum menyetujui
+                        })
+                        ->orWhere(function($q) {
+                            $q->where('acc_lead', 2) // Lead sudah menyetujui
+                              ->where('acc_hr_ga', 2) // HR GA sudah menyetujui
+                              ->where('acc_security_out', 1); // Security Out belum menyetujui
+                        })
+                        ->orWhere(function($q) {
+                            $q->where('acc_lead', 2) // Lead sudah menyetujui
+                              ->where('acc_hr_ga', 2) // HR GA sudah menyetujui
+                              ->where('acc_security_out', 2) // Security Out sudah menyetujui
+                              ->where('acc_security_in', 1); // Security In belum menyetujui
+                        });
+                })->count();
+                    
+            $totalDisetujui = RequestKaryawan::where('departemen_id', auth()->user()->departemen_id)
+                ->where('acc_lead', 2) // Lead menyetujui
+                ->where('acc_hr_ga', 2) // HR GA menyetujui
+                ->where('acc_security_out', 2) // Security Out menyetujui
+                ->where('acc_security_in', 2) // Security In menyetujui
+                ->count();
+                    
+            $totalDitolak = RequestKaryawan::where('departemen_id', auth()->user()->departemen_id)
+                ->where(function($query) {
+                    $query->where('acc_lead', 3) // Lead menolak
+                        ->orWhere(function($q) {
+                            $q->where('acc_lead', 2) // Lead menyetujui
+                              ->where('acc_hr_ga', 3); // HR GA menolak
+                        })
+                        ->orWhere(function($q) {
+                            $q->where('acc_lead', 2) // Lead menyetujui
+                              ->where('acc_hr_ga', 2) // HR GA menyetujui
+                              ->where('acc_security_out', 3); // Security Out menolak
+                        })
+                        ->orWhere(function($q) {
+                            $q->where('acc_lead', 2) // Lead menyetujui
+                              ->where('acc_hr_ga', 2) // HR GA menyetujui
+                              ->where('acc_security_out', 2) // Security Out menyetujui
+                              ->where('acc_security_in', 3); // Security In menolak
+                        });
+                })->count();
+                    
+            $totalRequest = RequestKaryawan::where('departemen_id', auth()->user()->departemen_id)->count();
+        }
         
         return view('superadmin.request-karyawan.index', compact(
             'title', 
@@ -148,6 +214,79 @@ class RequestKaryawanController extends Controller
             }
 
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Handle the approval of request
+     */
+    public function accRequest($id, $role_id)
+    {
+        try {
+            // Ambil data request karyawan
+            $requestKaryawan = RequestKaryawan::with(['departemen'])->find($id);
+
+            // Cek apakah data request karyawan ada
+            if (!$requestKaryawan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data Request Karyawan tidak ditemukan'
+                ], 404);
+            }
+
+            // Update status persetujuan berdasarkan role
+            switch ($role_id) {
+                case 2: // Lead
+                    $requestKaryawan->acc_lead = 2;
+                    $notificationTitle = 'Disetujui Lead';
+                    $notificationMessage = 'telah disetujui oleh Lead dan menunggu persetujuan HR GA';
+                    break;
+                case 3: // HR GA
+                    $requestKaryawan->acc_hr_ga = 2;
+                    $notificationTitle = 'Disetujui HR GA';
+                    $notificationMessage = 'telah disetujui oleh HR GA dan menunggu persetujuan Security Out';
+                    break;
+                case 6: // Security
+                    if ($requestKaryawan->acc_security_out == 1) {
+                        $requestKaryawan->acc_security_out = 2;
+                        $notificationTitle = 'Disetujui Security Out';
+                        $notificationMessage = 'telah disetujui oleh Security Out dan menunggu karyawan kembali';
+                    } else {
+                        $requestKaryawan->acc_security_in = 2;
+                        $notificationTitle = 'Disetujui Security In';
+                        $notificationMessage = 'telah disetujui oleh Security In dan permohonan selesai';
+                    }
+                    break;
+                default:
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Role tidak valid'
+                    ], 400);
+            }
+
+            $requestKaryawan->save();
+
+            // Buat notifikasi
+            Notification::create([
+                'user_id' => 1, // ID admin
+                'title' => 'Permohonan Izin Keluar ' . $requestKaryawan->nama . ' ' . $notificationTitle,
+                'message' => 'Permohonan izin keluar atas nama ' . $requestKaryawan->nama . 
+                           ' dari departemen ' . $requestKaryawan->departemen->name . 
+                           ' ' . $notificationMessage,
+                'type' => 'karyawan',
+                'status' => 'pending',
+                'is_read' => false
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Permohonan izin berhasil disetujui'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
         }
     }
 

@@ -175,7 +175,7 @@
                                                                     // Cek urutan persetujuan sesuai alur
                                                                     elseif($request->acc_admin == 1) {
                                                                         $status = 'warning';
-                                                                        $text = 'Menunggu Admin';
+                                                                        $text = 'Menunggu Admin/Checker';
                                                                     }
                                                                     elseif($request->acc_admin == 2 && $request->acc_head_unit == 1) {
                                                                         $status = 'warning';
@@ -224,6 +224,38 @@
                                                                         data-acc-security-in="{{ $request->acc_security_in }}">
                                                                     <i class="fas fa-eye"></i> Detail
                                                                 </button>
+                                                                {{-- Tombol ACC untuk Role Admin --}}
+                                                                @if(auth()->user()->role_id == 4 && $request->acc_admin == 1)
+                                                                <button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                                        data-id="{{ $request->id }}"
+                                                                        data-role-id="{{ auth()->user()->role_id }}">
+                                                                    <i class="fas fa-check"></i> ACC
+                                                                </button>
+                                                                {{-- Tombol ACC untuk Role Head Unit --}}
+                                                                @elseif(auth()->user()->role_id == 5 && $request->acc_head_unit == 1 && $request->acc_admin == 2)
+                                                                <button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                                        data-id="{{ $request->id }}"
+                                                                        data-role-id="{{ auth()->user()->role_id }}">
+                                                                    <i class="fas fa-check"></i> ACC
+                                                                </button>
+                                                                {{-- Tombol ACC untuk Role Security --}}
+                                                                @elseif(auth()->user()->role_id == 6 && $request->acc_admin == 2 && $request->acc_head_unit == 2)
+                                                                    @if($request->acc_security_out == 1)
+                                                                    {{-- Tombol ACC Out --}}
+                                                                    <button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                                            data-id="{{ $request->id }}"
+                                                                            data-role-id="{{ auth()->user()->role_id }}">
+                                                                        <i class="fas fa-sign-out-alt"></i> ACC Out
+                                                                    </button>
+                                                                    @elseif($request->acc_security_out == 2 && $request->acc_security_in == 1)
+                                                                    {{-- Tombol ACC In --}}
+                                                                    <button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                                            data-id="{{ $request->id }}"
+                                                                            data-role-id="{{ auth()->user()->role_id }}">
+                                                                        <i class="fas fa-sign-in-alt"></i> ACC In
+                                                                    </button>
+                                                                    @endif
+                                                                @endif
                                                             </td>
                                                         </tr>
                                                     @endforeach
@@ -322,6 +354,84 @@
         </div>
     </div>
 
+    <!-- Modal Konfirmasi ACC -->
+    <div class="modal fade" id="accConfirmationModal" tabindex="-1" role="dialog" aria-labelledby="accConfirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="accConfirmationModalLabel">Konfirmasi Persetujuan</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    Apakah Anda yakin ingin menyetujui permohonan izin ini?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-success" id="confirmAccBtn">Ya, Setujui</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .table-container {
+            position: relative;
+            margin-top: 20px;
+        }
+
+        .table-container .dataTables_filter {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            z-index: 1;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table-responsive::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .table table td {
+            white-space: nowrap;
+        }
+
+        #requestDriverTable th,
+        #requestDriverTable td {
+            white-space: nowrap !important;
+            min-width: 150px; /* Sesuaikan jika perlu */
+        }
+
+        #requestDriverTable th:nth-child(1),
+        #requestDriverTable td:nth-child(1) {
+            min-width: 50px; /* Lebar lebih kecil untuk kolom No. */
+        }
+
+        #requestDriverTable th:last-child,
+        #requestDriverTable td:last-child {
+            min-width: 180px; /* Lebar lebih besar untuk kolom Aksi */
+        }
+    </style>
+
     <script>
         $(document).ready(function() {
             // Inisialisasi DataTable
@@ -332,6 +442,8 @@
                 "order": [[5, "desc"]], // Urutkan berdasarkan tanggal (kolom ke-6) secara descending
                 "pageLength": 10,
                 "responsive": true,
+                "scrollX": true,
+                "autoWidth": false,
                 "dom": '<"top"f>rt<"bottom"lp><"clear">',
                 "columnDefs": [
                     { "orderable": false, "targets": [0, 10] }, // Nonaktifkan pengurutan untuk kolom No dan Aksi
@@ -427,6 +539,53 @@
                     securityInBadge = '<span class="badge badge-warning">Belum Masuk</span>';
                 }
                 $('#modal-acc-security-in').html(securityInBadge);
+            });
+
+            // Handle ACC button click
+            $('.acc-btn').click(function() {
+                const requestId = $(this).data('id');
+                const roleId = $(this).data('roleId');
+                console.log('ACC Button clicked, Request ID:', requestId);
+                // Store request ID in the modal for later use
+                $('#accConfirmationModal').data('requestId', requestId);
+                $('#accConfirmationModal').data('roleId', roleId);
+                // Show the confirmation modal
+                $('#accConfirmationModal').modal('show');
+            });
+
+            // Handle click on the confirmation button inside the modal
+            $('#confirmAccBtn').click(function() {
+                const requestId = $('#accConfirmationModal').data('requestId');
+                const roleId = $('#accConfirmationModal').data('roleId');
+                
+                // Close the modal
+                $('#accConfirmationModal').modal('hide');
+
+                // Proceed with the AJAX request
+                $.ajax({
+                    url: '/request-driver/' + requestId + '/acc/' + roleId,
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        if(response.success) {
+                            alert(response.message);
+                            location.reload();
+                        } else {
+                            alert('Terjadi kesalahan: ' + response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'Terjadi kesalahan.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = 'Terjadi kesalahan: ' + xhr.responseJSON.message;
+                        } else if (xhr.responseText) {
+                            errorMessage = 'Terjadi kesalahan: ' + xhr.responseText;
+                        }
+                        alert(errorMessage);
+                    }
+                });
             });
         });
     </script>

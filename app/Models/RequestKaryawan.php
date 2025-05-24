@@ -9,17 +9,7 @@ class RequestKaryawan extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'nama',
-        'departemen_id',
-        'keperluan',
-        'jam_in',
-        'jam_out',
-        'acc_lead',
-        'acc_hr_ga',
-        'acc_security_in',
-        'acc_security_out',
-    ];
+    protected $guarded = ['id'];
 
     public function departemen()
     {

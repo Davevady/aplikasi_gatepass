@@ -13,29 +13,34 @@ class RequestKaryawanSeeder extends Seeder
      */
     public function run(): void
     {
-        RequestKaryawan::create([
-            'nama' => 'Budi Santoso',
-            'departemen_id' => 1, // pastikan id 1 ada di tabel departemens
-            'keperluan' => 'Keperluan keluarga',
-            'jam_out' => '13:00',
-            'jam_in' => '15:00',
-            'acc_lead' => 1, // 1 = menunggu
-            'acc_hr_ga' => 1, // 1 = menunggu
-            'acc_security_in' => 1, // 1 = menunggu
-            'acc_security_out' => 1, // 1 = menunggu
-        ]);
+        $departemens = \App\Models\Departemen::whereNotIn('id', [1, 2])->get();
+        $names = ['Budi Santoso', 'Ani Wijaya', 'Dewi Lestari', 'Rudi Hartono', 'Siti Aminah', 'Ahmad Hidayat', 
+                 'Joko Widodo', 'Mega Putri', 'Agus Setiawan', 'Linda Sari', 'Rina Wati', 'Doni Pratama',
+                 'Siti Nurhaliza', 'Ahmad Dahlan', 'Nina Sartika', 'Bambang Susilo', 'Maya Indah', 'Rudi Kurniawan'];
+        $keperluans = ['Keperluan keluarga', 'Rapat dengan klien', 'Kunjungan ke supplier', 'Meeting internal', 
+                      'Urusan pribadi', 'Kunjungan ke customer', 'Konsultasi dengan vendor', 'Survey lokasi',
+                      'Training eksternal', 'Seminar industri', 'Kunjungan ke pameran', 'Koordinasi tim'];
+        $jamOuts = ['13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+        $jamIns = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+        $accStatuses = [1, 2]; // 1 = menunggu, 2 = disetujui
 
-        // Menambahkan data contoh lainnya
-        RequestKaryawan::create([
-            'nama' => 'Ani Wijaya',
-            'departemen_id' => 2,
-            'keperluan' => 'Rapat dengan klien',
-            'jam_out' => '14:00',
-            'jam_in' => '16:00',
-            'acc_lead' => 2, // 2 = disetujui
-            'acc_hr_ga' => 1, // 1 = menunggu
-            'acc_security_in' => 1, // 1 = menunggu
-            'acc_security_out' => 1, // 1 = menunggu
-        ]);
+        foreach ($departemens as $departemen) {
+            // Buat 3 data random untuk setiap departemen
+            for ($i = 0; $i < 3; $i++) {
+                RequestKaryawan::create([
+                    'nama' => $names[array_rand($names)],
+                    'departemen_id' => $departemen->id,
+                    'keperluan' => $keperluans[array_rand($keperluans)],
+                    'jam_out' => $jamOut = $jamOuts[array_rand($jamOuts)],
+                    'jam_in' => $jamIns[array_rand(array_filter($jamIns, function($jam) use ($jamOut) {
+                        return strtotime($jam) > strtotime($jamOut);
+                    }))],
+                    'acc_lead' => $accStatuses[array_rand($accStatuses)],
+                    'acc_hr_ga' => 1,
+                    'acc_security_in' => 1,
+                    'acc_security_out' => 1,
+                ]);
+            }
+        }
     }
 }
