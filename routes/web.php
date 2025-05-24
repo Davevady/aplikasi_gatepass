@@ -18,7 +18,9 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-
+Route::get('/', function() {
+    return redirect()->route('request-karyawan.create');
+});
 Route::resource('request-karyawan', RequestKaryawanController::class);
 Route::resource('request-driver', RequestDriverController::class);
 Route::get('/login', [UserController::class, 'login'])->name('login');
