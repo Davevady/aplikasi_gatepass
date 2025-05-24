@@ -20,15 +20,15 @@ class DepartemenSeeder extends Seeder
         ]);
 
         Departemen::create([
-            'name' => 'Production',
-            'code' => 'PRD',
-            'description' => 'Departemen Produksi',
-        ]);
-
-        Departemen::create([
             'name' => 'Human Resources',
             'code' => 'HRD',
             'description' => 'Departemen Sumber Daya Manusia',
+        ]);
+
+        Departemen::create([
+            'name' => 'Production',
+            'code' => 'PRD',
+            'description' => 'Departemen Produksi',
         ]);
 
         Departemen::create([
