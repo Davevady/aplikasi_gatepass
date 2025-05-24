@@ -51,6 +51,7 @@
                         </span>
                         <h4 class="text-section">Menu</h4>
                     </li>
+                    @if(in_array(Auth::user()->role->slug, ['admin', 'security', 'lead', 'hr-ga', 'checker', 'head-unit']))
                     <li class="nav-item {{ request()->is('request-karyawan*') || request()->is('request-driver*') ? 'active' : '' }}">
                         <a data-toggle="collapse" href="#submenuGatepass">
                             <i class="fas fa-id-card"></i>
@@ -59,19 +60,25 @@
                         </a>
                         <div class="collapse {{ request()->is('request-karyawan*') || request()->is('request-driver*') ? 'show' : '' }}" id="submenuGatepass">
                             <ul class="nav nav-collapse">
+                                @if(in_array(Auth::user()->role->slug, ['admin', 'security', 'lead', 'hr-ga']))
                                 <li data-name="Permohonan Karyawan" class="{{ request()->is('request-karyawan*') ? 'active' : '' }}">
                                     <a href="/request-karyawan"> 
                                         <span class="sub-item">Permohonan Karyawan</span>
                                     </a>
                                 </li>
+                                @endif
+                                @if(in_array(Auth::user()->role->slug, ['admin', 'security', 'checker', 'head-unit']))
                                 <li data-name="Permohonan Driver" class="{{ request()->is('request-driver*') ? 'active' : '' }}">
                                     <a href="/request-driver"> 
                                         <span class="sub-item">Permohonan Driver</span>
                                     </a>
                                 </li>
+                                @endif
                             </ul>
                         </div>
                     </li>
+                    @endif
+                    @if(Auth::user()->role->slug === 'admin')
                     <li class="nav-item {{ request()->is('users*') || request()->is('role*') || request()->is('departement*') ? 'active' : '' }}">
                         <a data-toggle="collapse" href="#submenuMaster">
                             <i class="fas fa-cog"></i>
@@ -82,7 +89,7 @@
                             <ul class="nav nav-collapse">
                                 <li data-name="Hak Akses" class="{{ request()->is('role*') ? 'active' : '' }}">
                                     <a href="/role"> 
-                                        <span class="sub-item">Hak Akses</span>
+                                        <span class="sub-item">Data Role</span>
                                     </a>
                                 </li>
                                 <li data-name="Data Departemen" class="{{ request()->is('departement*') ? 'active' : '' }}">
@@ -98,6 +105,7 @@
                             </ul>
                         </div>
                     </li>
+                    @endif
                 </ul>
             </div>
         </div>
