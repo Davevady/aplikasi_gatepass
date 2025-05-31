@@ -26,6 +26,8 @@ class User extends Authenticatable
         'password',
         'phone',
         'address',
+        'photo',
+        'is_active'
     ];
 
     /**
@@ -53,7 +55,7 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class);
     }
 
-    public function departement()
+    public function departemen()
     {
         return $this->belongsTo(Departemen::class);
     }

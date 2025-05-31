@@ -23,6 +23,8 @@ class UserSeeder extends Seeder
             'password' => Hash::make('password'),
             'address' => 'Jl. Raya No. 1',
             'phone' => '081234567891',
+            'photo' => 'superadmin.jpg',
+            'is_active' => true,
         ]);
 
         // HR GA (1 user)
@@ -32,6 +34,8 @@ class UserSeeder extends Seeder
             'name' => 'HR GA',
             'email' => 'hrga@gmail.com',
             'password' => Hash::make('password'),
+            'photo' => 'hrga.jpg',
+            'is_active' => true,
         ]);
 
         // Leader (2 user)
@@ -41,6 +45,8 @@ class UserSeeder extends Seeder
             'name' => 'Leader Production',
             'email' => 'leaderproduction@gmail.com',
             'password' => Hash::make('password'),
+            'photo' => 'leaderproduction.jpg',
+            'is_active' => true,
         ]);
         User::create([
             'departemen_id' => 4,
@@ -48,6 +54,8 @@ class UserSeeder extends Seeder
             'name' => 'Leader Finance',
             'email' => 'leaderfinance@gmail.com',
             'password' => Hash::make('password'),
+            'photo' => 'leaderfinance.jpg',
+            'is_active' => true,
         ]);
 
         // Checker (1 user)
@@ -57,6 +65,8 @@ class UserSeeder extends Seeder
             'name' => 'Checker',
             'email' => 'checker@gmail.com',
             'password' => Hash::make('password'),
+            'photo' => 'checker.jpg',
+            'is_active' => true,
         ]);
 
         // Head Unit (1 user)
@@ -66,6 +76,8 @@ class UserSeeder extends Seeder
             'name' => 'Head Unit',
             'email' => 'headunit@gmail.com',
             'password' => Hash::make('password'),
+            'photo' => 'headunit.jpg',
+            'is_active' => true,
         ]);
 
         // Security (1 user)
@@ -75,6 +87,8 @@ class UserSeeder extends Seeder
             'name' => 'Security',
             'email' => 'security@gmail.com',
             'password' => Hash::make('password'),
+            'photo' => 'security.jpg',
+            'is_active' => true,
         ]);
     }
 }
