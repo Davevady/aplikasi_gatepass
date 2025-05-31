@@ -437,7 +437,19 @@
             // Inisialisasi DataTable
             $('#requestDriverTable').DataTable({
                 "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Indonesian.json"
+                    "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Indonesian.json",
+                    "search": "Cari:",
+                    "lengthMenu": "Tampilkan _MENU_ data per halaman",
+                    "zeroRecords": "Tidak ada data yang ditemukan",
+                    "info": "Menampilkan halaman _PAGE_ dari _PAGES_",
+                    "infoEmpty": "Tidak ada data tersedia",
+                    "infoFiltered": "(difilter dari _MAX_ total data)",
+                    "paginate": {
+                        "first": "Pertama",
+                        "last": "Terakhir", 
+                        "next": "Selanjutnya",
+                        "previous": "Sebelumnya"
+                    }
                 },
                 "order": [[5, "desc"]], // Urutkan berdasarkan tanggal (kolom ke-6) secara descending
                 "pageLength": 10,
