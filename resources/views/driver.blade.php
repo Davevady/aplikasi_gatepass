@@ -130,7 +130,7 @@
                         <div class="card-body p-4 p-sm-5">
                             <div class="text-center mb-4">
                                 <h1 class="h3 text-primary mb-2">
-                                    <i class="bi bi-truck"></i> Form Driver
+                                    <i class="bi bi-truck"></i> Form Izin Keluar Driver
                                 </h1>
                                 <p class="text-muted">Silakan isi form driver dengan lengkap</p>
                             </div>
