@@ -10,7 +10,9 @@ use Illuminate\Support\Str;
 class RoleController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Menampilkan daftar semua role yang tersedia
+     * 
+     * @return \Illuminate\View\View
      */
     public function index()
     {
@@ -28,11 +30,15 @@ class RoleController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Menyimpan role baru ke database
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
         try {
+            // Validasi input
             $validator = Validator::make($request->all(), [
                 'title' => 'required|string|max:255|unique:roles',
                 'description' => 'required|string'
@@ -45,6 +51,7 @@ class RoleController extends Controller
                     ->with('modal', 'add');
             }
 
+            // Buat role baru dengan slug otomatis
             $role = Role::create([
                 'title' => $request->title,
                 'slug' => Str::slug($request->title),
@@ -61,7 +68,10 @@ class RoleController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Menampilkan detail role dalam format JSON
+     * 
+     * @param Role $role
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show(Role $role)
     {
@@ -77,11 +87,16 @@ class RoleController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Memperbarui data role yang sudah ada
+     * 
+     * @param Request $request
+     * @param Role $role
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, Role $role)
     {
         try {
+            // Validasi input
             $validator = Validator::make($request->all(), [
                 'title' => 'required|string|max:255|unique:roles,title,' . $role->id,
                 'description' => 'required|string'
@@ -93,6 +108,7 @@ class RoleController extends Controller
                     ->withInput();
             }
 
+            // Update data role
             $role->update([
                 'title' => $request->title,
                 'description' => $request->description
@@ -107,15 +123,20 @@ class RoleController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Menghapus role dari database
+     * 
+     * @param Role $role
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy(Role $role)
     {
         try {
+            // Cek apakah role masih digunakan oleh user
             if ($role->users()->count() > 0) {
                 return redirect()->back()->with('error', 'Role tidak dapat dihapus karena masih digunakan oleh pengguna');
             }
 
+            // Hapus role
             $role->delete();
 
             return redirect()->back()->with('success', 'Role berhasil dihapus');

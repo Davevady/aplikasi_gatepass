@@ -14,20 +14,32 @@ use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
+    /**
+     * Menampilkan halaman login
+     * 
+     * @return \Illuminate\View\View
+     */
     public function login()
     {
         $title = 'Masuk';
         return view('auth.login', compact('title'));
     }
 
+    /**
+     * Memproses login user
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function authLogin(Request $request)
     {
+        // Validasi input login
         $credentials = $request->validate([
             'email' => 'required|email:dns',
             'password' => 'required',
         ]);
 
-        // Get user data first to check status
+        // Cek keberadaan user
         $user = User::where('email', $credentials['email'])->first();
 
         if (!$user) {
@@ -36,13 +48,14 @@ class UserController extends Controller
             ])->onlyInput('email');
         }
 
-        // Check if user is active
+        // Cek status aktif user
         if (!$user->is_active) {
             return back()->withErrors([
                 'email' => 'Akun Anda telah dinonaktifkan. Silakan hubungi administrator.',
             ])->onlyInput('email');
         }
 
+        // Coba login
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
             return redirect()->intended('dashboard');
@@ -53,16 +66,27 @@ class UserController extends Controller
         ])->onlyInput('email');
     }
 
+    /**
+     * Menampilkan halaman registrasi
+     * 
+     * @return \Illuminate\View\View
+     */
     public function register()
     {
         $title = 'Daftar';
         return view('auth.register', compact('title'));
     }
 
+    /**
+     * Memproses registrasi user baru
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function authRegister(Request $request)
     {
         try {
-            // Validasi input
+            // Validasi input registrasi
             $validator = Validator::make($request->all(), [
                 'title' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
@@ -79,7 +103,7 @@ class UserController extends Controller
                 return redirect()->back()->withErrors(['email' => 'Email sudah terdaftar'])->withInput();
             }
 
-            // Buat user baru
+            // Buat user baru dengan role default (1)
             $user = User::create([
                 'title' => $request->title,
                 'email' => $request->email,
@@ -94,6 +118,12 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Memproses logout user
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function logout(Request $request)
     {
         Auth::logout();
@@ -103,7 +133,9 @@ class UserController extends Controller
     }
 
     /**
-     * Display a listing of the resource.
+     * Menampilkan daftar semua user
+     * 
+     * @return \Illuminate\View\View
      */
     public function index()
     {
@@ -115,7 +147,10 @@ class UserController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Menyimpan user baru ke database
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
@@ -160,7 +195,7 @@ class UserController extends Controller
                 $user->role_id = $request->role_id;
                 $user->is_active = 1;
 
-                // Upload Photo
+                // Upload foto jika ada
                 if ($request->hasFile('photo')) {
                     $photo = $request->file('photo');
                     $photoName = time() . '.' . $photo->extension();
@@ -196,19 +231,16 @@ class UserController extends Controller
     }
 
     /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
+     * Memperbarui data user yang sudah ada
+     * 
+     * @param Request $request
+     * @param int $id ID user
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, $id)
     {
         try {
+            // Validasi input
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'role_id' => 'required|exists:roles,id',
@@ -231,13 +263,16 @@ class UserController extends Controller
                     ->with('edit_id', $id);
             }
 
+            // Cari user berdasarkan ID
             $user = User::findOrFail($id);
             
+            // Siapkan data untuk update
             $data = [
                 'name' => $request->name,
                 'role_id' => $request->role_id
             ];
 
+            // Update foto jika ada
             if ($request->hasFile('photo')) {
                 // Hapus foto lama jika ada
                 if ($user->photo && file_exists(public_path($user->photo))) {
@@ -268,11 +303,15 @@ class UserController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Menghapus user dari database
+     * 
+     * @param int $id ID user
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy($id)
     {
         try {
+            // Cari user berdasarkan ID
             $user = User::findOrFail($id);
 
             // Hapus foto jika ada
@@ -293,9 +332,17 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Mengubah status aktif user
+     * 
+     * @param Request $request
+     * @param int $id ID user
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function toggleActive(Request $request, $id)
     {
         try {
+            // Cari user berdasarkan ID
             $user = User::findOrFail($id);
             
             // Update status aktif
@@ -327,6 +374,12 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Mengembalikan user yang sudah dihapus
+     * 
+     * @param int $id ID user
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function restore($id)
     {
         $user = User::find($id);
@@ -340,11 +393,16 @@ class UserController extends Controller
     }
 
     /**
-     * Update user's email
+     * Memperbarui email user
+     * 
+     * @param Request $request
+     * @param int $id ID user
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function updateEmail(Request $request, $id)
     {
         try {
+            // Validasi input
             $validator = Validator::make($request->all(), [
                 'email' => 'required|string|email|max:255|unique:users,email,' . $id
             ], [
@@ -361,6 +419,7 @@ class UserController extends Controller
                     ->with('edit_id', $id);
             }
 
+            // Update email user
             $user = User::findOrFail($id);
             $user->email = $request->email;
             $user->save();
@@ -381,11 +440,16 @@ class UserController extends Controller
     }
 
     /**
-     * Reset user's password
+     * Mereset password user
+     * 
+     * @param Request $request
+     * @param int $id ID user
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function resetPassword(Request $request, $id)
     {
         try {
+            // Validasi input
             $validator = Validator::make($request->all(), [
                 'password' => 'required|string|min:8|confirmed'
             ], [
@@ -402,6 +466,7 @@ class UserController extends Controller
                     ->with('edit_id', $id);
             }
 
+            // Update password user
             $user = User::findOrFail($id);
             $user->password = Hash::make($request->password);
             $user->save();
@@ -422,11 +487,16 @@ class UserController extends Controller
     }
 
     /**
-     * Update user's photo
+     * Memperbarui foto profil user
+     * 
+     * @param Request $request
+     * @param int $id ID user
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function updatePhoto(Request $request, $id)
     {
         try {
+            // Validasi input
             $validator = Validator::make($request->all(), [
                 'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
             ], [
@@ -444,6 +514,7 @@ class UserController extends Controller
                     ->with('edit_id', $id);
             }
 
+            // Cari user berdasarkan ID
             $user = User::findOrFail($id);
 
             // Hapus foto lama jika ada
@@ -475,11 +546,16 @@ class UserController extends Controller
     }
 
     /**
-     * Update user's basic info (name, role, departemen)
+     * Memperbarui informasi dasar user (nama, role, departemen)
+     * 
+     * @param Request $request
+     * @param int $id ID user
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function updateBasicInfo(Request $request, $id)
     {
         try {
+            // Validasi input
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'role_id' => 'required|exists:roles,id',
@@ -501,6 +577,7 @@ class UserController extends Controller
                     ->with('edit_id', $id);
             }
 
+            // Update informasi dasar user
             $user = User::findOrFail($id);
             $user->name = $request->name;
             $user->role_id = $request->role_id;
@@ -523,11 +600,15 @@ class UserController extends Controller
     }
 
     /**
-     * Reset user's password to default
+     * Mereset password user ke default
+     * 
+     * @param int $id ID user
+     * @return \Illuminate\Http\JsonResponse
      */
     public function resetPasswordToDefault($id)
     {
         try {
+            // Cari user berdasarkan ID
             $user = User::findOrFail($id);
             
             // Reset password ke default

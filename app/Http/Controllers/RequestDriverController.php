@@ -9,7 +9,9 @@ use Illuminate\Http\Request;
 class RequestDriverController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Menampilkan daftar permohonan izin keluar driver
+     * 
+     * @return \Illuminate\View\View
      */
     public function index()
     {
@@ -17,33 +19,36 @@ class RequestDriverController extends Controller
         
         // Mengambil data yang masih memiliki status menunggu (value 1)
         $requestDrivers = RequestDriver::where(function($query) {
-            $query->where('acc_admin', 1)
-                ->orWhere('acc_head_unit', 1)
-                ->orWhere('acc_security_out', 1)
-                ->orWhere('acc_security_in', 1);
+            $query->where('acc_admin', 1) // Admin belum menyetujui
+                ->orWhere('acc_head_unit', 1) // Head Unit belum menyetujui
+                ->orWhere('acc_security_out', 1) // Security Out belum menyetujui
+                ->orWhere('acc_security_in', 1); // Security In belum menyetujui
         })->get();
         
         // Menghitung total request berdasarkan status
         $totalMenunggu = RequestDriver::where(function($query) {
-            $query->where('acc_admin', 1)
-                ->orWhere('acc_head_unit', 1)
-                ->orWhere('acc_security_out', 1)
-                ->orWhere('acc_security_in', 1);
+            $query->where('acc_admin', 1) // Admin belum menyetujui
+                ->orWhere('acc_head_unit', 1) // Head Unit belum menyetujui
+                ->orWhere('acc_security_out', 1) // Security Out belum menyetujui
+                ->orWhere('acc_security_in', 1); // Security In belum menyetujui
         })->count();
             
-        $totalDisetujui = RequestDriver::where('acc_admin', 2)
-            ->where('acc_head_unit', 2)
-            ->where('acc_security_out', 2)
-            ->where('acc_security_in', 2)
+        // Menghitung total request yang sudah disetujui semua pihak
+        $totalDisetujui = RequestDriver::where('acc_admin', 2) // Admin menyetujui
+            ->where('acc_head_unit', 2) // Head Unit menyetujui
+            ->where('acc_security_out', 2) // Security Out menyetujui
+            ->where('acc_security_in', 2) // Security In menyetujui
             ->count();
             
+        // Menghitung total request yang ditolak oleh salah satu pihak
         $totalDitolak = RequestDriver::where(function($query) {
-            $query->where('acc_admin', 3)
-                ->orWhere('acc_head_unit', 3)
-                ->orWhere('acc_security_out', 3)
-                ->orWhere('acc_security_in', 3);
+            $query->where('acc_admin', 3) // Admin menolak
+                ->orWhere('acc_head_unit', 3) // Head Unit menolak
+                ->orWhere('acc_security_out', 3) // Security Out menolak
+                ->orWhere('acc_security_in', 3); // Security In menolak
         })->count();
             
+        // Total semua request
         $totalRequest = RequestDriver::count();
         
         return view('superadmin.request-driver.index', compact(
@@ -57,7 +62,9 @@ class RequestDriverController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Menampilkan form pengajuan izin keluar driver
+     * 
+     * @return \Illuminate\View\View
      */
     public function create()
     {
@@ -66,10 +73,14 @@ class RequestDriverController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Menyimpan permohonan izin keluar driver baru
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
+        // Validasi input
         $validated = $request->validate([
             'nama_ekspedisi' => 'required|string|max:255',
             'nopol_kendaraan' => 'required|string|max:255',
@@ -95,6 +106,7 @@ class RequestDriverController extends Controller
         ]);
 
         try {
+            // Buat request driver baru
             $requestDriver = RequestDriver::create($validated);
 
             // Buat notifikasi untuk admin
@@ -109,6 +121,7 @@ class RequestDriverController extends Controller
                 'is_read' => false
             ]);
 
+            // Pesan sukses
             $successMessage = "Pengajuan izin driver berhasil dikirim.\n" .
                             "Nama Ekpedisi: " . $validated['nama_ekspedisi'] . "\n" .
                             "Nomor Polisi: " . $validated['nopol_kendaraan'] . "\n" .
@@ -116,6 +129,7 @@ class RequestDriverController extends Controller
                             "Jam Keluar: " . $validated['jam_out'] . "\n" .
                             "Jam Kembali: " . $validated['jam_in'];
 
+            // Return response berdasarkan tipe request
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
@@ -137,7 +151,11 @@ class RequestDriverController extends Controller
     }
 
     /**
-     * Handle the approval of request
+     * Menangani persetujuan permohonan izin keluar driver
+     * 
+     * @param int $id ID request driver
+     * @param int $role_id ID role yang menyetujui
+     * @return \Illuminate\Http\JsonResponse
      */
     public function accRequest($id, $role_id)
     {
@@ -183,6 +201,7 @@ class RequestDriverController extends Controller
                     ], 400);
             }
 
+            // Simpan perubahan
             $requestDriver->save();
 
             // Buat notifikasi

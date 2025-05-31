@@ -9,6 +9,12 @@ use Illuminate\Support\Facades\Log;
 
 class DepartemenController extends Controller
 {
+    /**
+     * Membuat kode departemen otomatis berdasarkan nama
+     * 
+     * @param string $name Nama departemen
+     * @return string Kode departemen yang dihasilkan
+     */
     private function generateCode($name)
     {
         // Simpan huruf pertama
@@ -23,7 +29,9 @@ class DepartemenController extends Controller
     }
 
     /**
-     * Display a listing of the resource.
+     * Menampilkan daftar semua departemen
+     * 
+     * @return \Illuminate\View\View
      */
     public function index()
     {
@@ -41,11 +49,15 @@ class DepartemenController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Menyimpan departemen baru ke database
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
         try {
+            // Validasi input
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'code' => 'required|string|max:10|unique:departemens',
@@ -59,6 +71,7 @@ class DepartemenController extends Controller
                     ->with('modal', 'add');
             }
 
+            // Buat departemen baru
             Departemen::create([
                 'name' => $request->name,
                 'code' => strtoupper($request->code),
@@ -91,7 +104,11 @@ class DepartemenController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Memperbarui data departemen yang sudah ada
+     * 
+     * @param Request $request
+     * @param int $id ID departemen
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, $id)
     {
@@ -99,6 +116,7 @@ class DepartemenController extends Controller
             // Cari departemen berdasarkan ID
             $departemen = Departemen::findOrFail($id);
 
+            // Validasi input
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'code' => 'required|string|max:10|unique:departemens,code,' . $id,
@@ -129,7 +147,7 @@ class DepartemenController extends Controller
                     ->with('error', trim($errorMessage));
             }
 
-            // Update data yang ada
+            // Update data departemen
             $departemen->name = $request->name;
             $departemen->code = strtoupper($request->code);
             $departemen->description = $request->description;
@@ -143,7 +161,10 @@ class DepartemenController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Menghapus departemen dari database
+     * 
+     * @param int $id ID departemen
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy($id)
     {

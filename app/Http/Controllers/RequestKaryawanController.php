@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Log;
 class RequestKaryawanController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Menampilkan daftar permohonan izin keluar karyawan
+     * 
+     * @return \Illuminate\View\View
      */
     public function index()
     {
@@ -41,12 +43,14 @@ class RequestKaryawanController extends Controller
                     });
             })->count();
                     
+            // Menghitung total request yang sudah disetujui semua pihak
             $totalDisetujui = RequestKaryawan::where('acc_lead', 2) // Lead menyetujui
                 ->where('acc_hr_ga', 2) // HR GA menyetujui
                 ->where('acc_security_out', 2) // Security Out menyetujui
                 ->where('acc_security_in', 2) // Security In menyetujui
                 ->count();
                     
+            // Menghitung total request yang ditolak oleh salah satu pihak
             $totalDitolak = RequestKaryawan::where(function($query) {
                 $query->where('acc_lead', 3) // Lead menolak
                     ->orWhere(function($q) {
@@ -66,20 +70,22 @@ class RequestKaryawanController extends Controller
                     });
             })->count();
                     
+            // Total semua request
             $totalRequest = RequestKaryawan::count();
         } else {
             // Untuk role lain, tampilkan hanya departemen user tersebut
             $departemens = Departemen::with(['requestKaryawans' => function($query) {
                 $query->where(function($q) {
-                    $q->where('acc_lead', 1)
-                      ->orWhere('acc_hr_ga', 1)
-                      ->orWhere('acc_security_out', 1)
-                      ->orWhere('acc_security_in', 1);
+                    $q->where('acc_lead', 1) // Lead belum menyetujui
+                      ->orWhere('acc_hr_ga', 1) // HR GA belum menyetujui
+                      ->orWhere('acc_security_out', 1) // Security Out belum menyetujui
+                      ->orWhere('acc_security_in', 1); // Security In belum menyetujui
                 });
             }])
             ->where('id', auth()->user()->departemen_id)
             ->get();
-            // Menghitung total request berdasarkan status dengan urutan persetujuan
+
+            // Menghitung total request berdasarkan status dengan urutan persetujuan untuk departemen user
             $totalMenunggu = RequestKaryawan::where('departemen_id', auth()->user()->departemen_id)
                 ->where(function($query) {
                     $query->where('acc_lead', 1) // Lead belum menyetujui
@@ -100,6 +106,7 @@ class RequestKaryawanController extends Controller
                         });
                 })->count();
                     
+            // Menghitung total request yang sudah disetujui semua pihak untuk departemen user
             $totalDisetujui = RequestKaryawan::where('departemen_id', auth()->user()->departemen_id)
                 ->where('acc_lead', 2) // Lead menyetujui
                 ->where('acc_hr_ga', 2) // HR GA menyetujui
@@ -107,6 +114,7 @@ class RequestKaryawanController extends Controller
                 ->where('acc_security_in', 2) // Security In menyetujui
                 ->count();
                     
+            // Menghitung total request yang ditolak oleh salah satu pihak untuk departemen user
             $totalDitolak = RequestKaryawan::where('departemen_id', auth()->user()->departemen_id)
                 ->where(function($query) {
                     $query->where('acc_lead', 3) // Lead menolak
@@ -127,6 +135,7 @@ class RequestKaryawanController extends Controller
                         });
                 })->count();
                     
+            // Total semua request untuk departemen user
             $totalRequest = RequestKaryawan::where('departemen_id', auth()->user()->departemen_id)->count();
         }
         
@@ -141,7 +150,9 @@ class RequestKaryawanController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Menampilkan form pengajuan izin keluar karyawan
+     * 
+     * @return \Illuminate\View\View
      */
     public function create()
     {
@@ -151,11 +162,15 @@ class RequestKaryawanController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Menyimpan permohonan izin keluar karyawan baru
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
         try {
+            // Validasi input
             $validated = $request->validate([
                 'nama' => 'required|string|max:255',
                 'departemen_id' => 'required|exists:departemens,id',
@@ -176,6 +191,7 @@ class RequestKaryawanController extends Controller
                 'acc_security_out' => 1
             ]);
 
+            // Buat request karyawan baru
             $requestKaryawan = RequestKaryawan::create($validated);
 
             // Buat notifikasi untuk admin
@@ -191,12 +207,14 @@ class RequestKaryawanController extends Controller
                 'is_read' => false
             ]);
 
+            // Pesan sukses
             $successMessage = "Pengajuan izin karyawan berhasil dikirim.\n" .
                             "Nama: " . $validated['nama'] . "\n" .
                             "Departemen: " . Departemen::find($validated['departemen_id'])->name . "\n" .
                             "Jam Keluar: " . $validated['jam_out'] . "\n" .
                             "Jam Kembali: " . $validated['jam_in'];
 
+            // Return response berdasarkan tipe request
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
@@ -218,12 +236,16 @@ class RequestKaryawanController extends Controller
     }
 
     /**
-     * Handle the approval of request
+     * Menangani persetujuan permohonan izin keluar karyawan
+     * 
+     * @param int $id ID request karyawan
+     * @param int $role_id ID role yang menyetujui
+     * @return \Illuminate\Http\JsonResponse
      */
     public function accRequest($id, $role_id)
     {
         try {
-            // Ambil data request karyawan
+            // Ambil data request karyawan dengan relasi departemen
             $requestKaryawan = RequestKaryawan::with(['departemen'])->find($id);
 
             // Cek apakah data request karyawan ada
@@ -264,6 +286,7 @@ class RequestKaryawanController extends Controller
                     ], 400);
             }
 
+            // Simpan perubahan
             $requestKaryawan->save();
 
             // Buat notifikasi
