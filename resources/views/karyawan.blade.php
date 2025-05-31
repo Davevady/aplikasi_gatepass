@@ -130,7 +130,7 @@
                         <div class="card-body p-4 p-sm-5">
                             <div class="text-center mb-4">
                                 <h1 class="h3 text-primary mb-2">
-                                    <i class="bi bi-person-walking"></i> Form Izin Keluar
+                                    <i class="bi bi-person-walking"></i> Form Izin Keluar GitHub
                                 </h1>
                                 <p class="text-muted">Silakan isi form izin keluar dengan lengkap</p>
                             </div>
