@@ -312,36 +312,4 @@ class RequestKaryawanController extends Controller
             ], 500);
         }
     }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(RequestKaryawan $requestKaryawan)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(RequestKaryawan $requestKaryawan)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, RequestKaryawan $requestKaryawan)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(RequestKaryawan $requestKaryawan)
-    {
-        //
-    }
 }

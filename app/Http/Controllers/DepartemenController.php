@@ -10,25 +10,6 @@ use Illuminate\Support\Facades\Log;
 class DepartemenController extends Controller
 {
     /**
-     * Membuat kode departemen otomatis berdasarkan nama
-     * 
-     * @param string $name Nama departemen
-     * @return string Kode departemen yang dihasilkan
-     */
-    private function generateCode($name)
-    {
-        // Simpan huruf pertama
-        $firstChar = substr($name, 0, 1);
-        // Hapus huruf vokal kecuali huruf pertama
-        $name = $firstChar . preg_replace('/[aeiou]/i', '', substr($name, 1));
-        // Hapus spasi dan karakter khusus
-        $name = preg_replace('/[^a-zA-Z0-9]/', '', $name);
-        // Ubah ke kapital
-        $name = strtoupper($name);
-        return $name;
-    }
-
-    /**
      * Menampilkan daftar semua departemen
      * 
      * @return \Illuminate\View\View
@@ -38,14 +19,6 @@ class DepartemenController extends Controller
         $title = 'Departemen';
         $departemens = Departemen::all();
         return view('superadmin.departemen.index', compact('departemens', 'title'));
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
     }
 
     /**

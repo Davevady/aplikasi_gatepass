@@ -227,36 +227,4 @@ class RequestDriverController extends Controller
             ], 500);
         }
     }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(RequestDriver $requestDriver)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(RequestDriver $requestDriver)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, RequestDriver $requestDriver)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(RequestDriver $requestDriver)
-    {
-        //
-    }
 }
