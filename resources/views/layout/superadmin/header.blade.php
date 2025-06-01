@@ -107,11 +107,17 @@
                         <div class="dropdown-user-scroll scrollbar-outer">
                             <li>
                                 <div class="user-box">
-                                    <div class="avatar-lg"><img src="../assets/img/profile.jpg" alt="image profile" class="avatar-img rounded"></div>
+                                    <div class="avatar-lg">
+                                        @if(Auth::user()->photo)
+                                            <img src="{{ asset(Auth::user()->photo) }}" alt="image profile" class="avatar-img rounded">
+                                        @else
+                                            <img src="{{ asset('images/users/default.png') }}" alt="image profile" class="avatar-img rounded">
+                                        @endif
+                                    </div>
                                     <div class="u-text">
                                         <h4>{{ Auth::user()->name }}</h4>
                                         <p class="text-muted">{{ Auth::user()->email }}</p>
-                                        <a href="/profile" class="btn btn-xs btn-secondary btn-sm">Lihat Profil</a>
+                                        <a href="{{ route('users.profile', ['id' => Auth::id()]) }}" class="btn btn-xs btn-secondary btn-sm">Lihat Profil</a>
                                     </div>
                                 </div>
                             </li>

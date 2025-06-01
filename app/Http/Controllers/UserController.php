@@ -147,6 +147,40 @@ class UserController extends Controller
     }
 
     /**
+     * Menampilkan profil user berdasarkan ID
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function profile($id)
+    {
+        try {
+            // Cari user berdasarkan ID dengan relasi departemen, role dan notifikasi
+            $user = User::with(['departemen', 'role', 'notifications' => function($query) {
+                $query->orderBy('created_at', 'desc');
+            }])->findOrFail($id);
+
+            // Log akses profil
+            Log::info('User profile accessed', [
+                'user_id' => $user->id,
+                'user_name' => $user->name
+            ]);
+
+            return view('superadmin.users.profile', [
+                'title' => 'Profil Pengguna',
+                'user' => $user
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error accessing user profile:', [
+                'user_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()->with('error', 'Gagal mengambil data profil: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Menyimpan user baru ke database
      * 
      * @param Request $request

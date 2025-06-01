@@ -23,7 +23,7 @@ class UserSeeder extends Seeder
             'password' => Hash::make('password'),
             'address' => 'Jl. Raya No. 1',
             'phone' => '081234567891',
-            'photo' => 'superadmin.jpg',
+            'photo' => 'images/users/superadmin.png',
             'is_active' => true,
         ]);
 
@@ -34,7 +34,7 @@ class UserSeeder extends Seeder
             'name' => 'HR GA',
             'email' => 'hrga@gmail.com',
             'password' => Hash::make('password'),
-            'photo' => 'hrga.jpg',
+            'photo' => 'images/users/hrga.png',
             'is_active' => true,
         ]);
 
@@ -45,7 +45,7 @@ class UserSeeder extends Seeder
             'name' => 'Leader Production',
             'email' => 'leaderproduction@gmail.com',
             'password' => Hash::make('password'),
-            'photo' => 'leaderproduction.jpg',
+            'photo' => 'images/users/leaderproduction.png',
             'is_active' => true,
         ]);
         User::create([
@@ -54,7 +54,7 @@ class UserSeeder extends Seeder
             'name' => 'Leader Finance',
             'email' => 'leaderfinance@gmail.com',
             'password' => Hash::make('password'),
-            'photo' => 'leaderfinance.jpg',
+            'photo' => 'images/users/leaderfinance.png',
             'is_active' => true,
         ]);
 
@@ -65,7 +65,7 @@ class UserSeeder extends Seeder
             'name' => 'Checker',
             'email' => 'checker@gmail.com',
             'password' => Hash::make('password'),
-            'photo' => 'checker.jpg',
+            'photo' => 'images/users/checker.png',
             'is_active' => true,
         ]);
 
@@ -76,7 +76,7 @@ class UserSeeder extends Seeder
             'name' => 'Head Unit',
             'email' => 'headunit@gmail.com',
             'password' => Hash::make('password'),
-            'photo' => 'headunit.jpg',
+            'photo' => 'images/users/headunit.png',
             'is_active' => true,
         ]);
 
@@ -87,7 +87,7 @@ class UserSeeder extends Seeder
             'name' => 'Security',
             'email' => 'security@gmail.com',
             'password' => Hash::make('password'),
-            'photo' => 'security.jpg',
+            'photo' => 'images/users/security.png',
             'is_active' => true,
         ]);
     }

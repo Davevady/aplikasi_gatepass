@@ -59,6 +59,7 @@ Route::middleware(['auth'])->group(function () {
         
         // Users management
         Route::resource('users', UserController::class)->except(['update', 'destroy']);
+        Route::get('/users/{id}/profile', [UserController::class, 'profile'])->name('users.profile');
         Route::put('/users/update-basic-info/{id}', [UserController::class, 'updateBasicInfo'])->name('users.update-basic-info');
         Route::put('/users/update-email/{id}', [UserController::class, 'updateEmail'])->name('users.update-email');
         Route::put('/users/reset-password/{id}', [UserController::class, 'resetPassword'])->name('users.reset-password');
