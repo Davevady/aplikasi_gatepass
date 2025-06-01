@@ -75,19 +75,25 @@
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#modalEdit" 
+                                                        @if(auth()->user()->role && auth()->user()->role->slug == 'admin')
+                                                            <a href="{{ route('users.profile', $user->id) }}" class="btn btn-sm btn-primary">
+                                                                <i class="fas fa-eye"></i> Detail
+                                                            </a>
+                                                        @endif
+
+                                                        <button type="button" class="btn btn-sm btn-success" data-toggle="modal" data-target="#modalEdit" 
                                                             data-id="{{ $user->id }}"
                                                             data-name="{{ $user->name }}"
                                                             data-departemen="{{ $user->departemen_id }}"
                                                             data-role="{{ $user->role_id }}">
                                                             <i class="fas fa-edit"></i> Edit
                                                         </button>
-                                                        <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#modalEmail"
+                                                        <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#modalEmail"
                                                             data-id="{{ $user->id }}"
                                                             data-email="{{ $user->email }}">
                                                             <i class="fas fa-envelope"></i> Email
                                                         </button>
-                                                        <button type="button" class="btn btn-sm btn-secondary" data-toggle="modal" data-target="#modalPassword"
+                                                        <button type="button" class="btn btn-sm btn-dark" data-toggle="modal" data-target="#modalPassword"
                                                             data-id="{{ $user->id }}">
                                                             <i class="fas fa-key"></i> Password
                                                         </button>
@@ -96,7 +102,7 @@
                                                             data-name="{{ $user->name }}">
                                                             <i class="fas fa-sync"></i> Reset Password
                                                         </button>
-                                                        <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#modalPhoto"
+                                                        <button type="button" class="btn btn-sm btn-secondary" data-toggle="modal" data-target="#modalPhoto"
                                                             data-id="{{ $user->id }}">
                                                             <i class="fas fa-camera"></i> Foto
                                                         </button>
