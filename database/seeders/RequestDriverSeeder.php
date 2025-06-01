@@ -126,7 +126,7 @@ class RequestDriverSeeder extends Seeder
                                     'title' => 'Permohonan Izin Driver ' . $namaEkspedisi . ' Disetujui Security In',
                                     'message' => 'Permohonan izin driver atas nama ' . $namaEkspedisi . 
                                                ' dengan nopol ' . $nopol . 
-                                               ' untuk keperluan ' . $keperluan . 
+                                               ' untuk keperluan ' . $requestDriver->keperluan . 
                                                ' telah disetujui oleh Security In dan permohonan selesai',
                                     'type' => 'driver',
                                     'status' => 'approved',
