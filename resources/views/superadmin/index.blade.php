@@ -57,26 +57,53 @@
 				</div>
 				<div class="page-inner mt--5">
 					<div class="row mt--2">
-                        <!-- Statistik Utama -->
+                        <!-- Statistik Karyawan -->
+                        @if(auth()->user()->role_id != 2 && auth()->user()->role_id != 3)
                         <div class="col-md-3">
-                            <div class="card card-stats card-round">
+                            <div class="card card-stats card-round" style="cursor: pointer;" onclick="window.location.href='{{ route('request-karyawan.index') }}'">
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-5">
                                             <div class="icon-big text-center">
-                                                <i class="fas fa-file-alt text-primary"></i>
+                                                <i class="fas fa-users text-primary"></i>
                                             </div>
                                         </div>
                                         <div class="col-7 col-stats">
                                             <div class="numbers">
-                                                <p class="card-category">Total Permohonan</p>
-                                                <h4 class="card-title">{{ $totalRequest }}</h4>
+                                                <p class="card-category">Permohonan Karyawan</p>
+                                                <h4 class="card-title">{{ $totalKaryawanRequest }}</h4>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        @endif
+
+                        <!-- Statistik Driver -->
+                        @if(auth()->user()->role_id != 4 && auth()->user()->role_id != 5)
+                        <div class="col-md-3">
+                            <div class="card card-stats card-round" style="cursor: pointer;" onclick="window.location.href='{{ route('request-driver.index') }}'">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-5">
+                                            <div class="icon-big text-center">
+                                                <i class="fas fa-truck text-info"></i>
+                                            </div>
+                                        </div>
+                                        <div class="col-7 col-stats">
+                                            <div class="numbers">
+                                                <p class="card-category">Permohonan Driver</p>
+                                                <h4 class="card-title">{{ $totalDriverRequest }}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+
+                        <!-- Statistik Status -->
                         <div class="col-md-3">
                             <div class="card card-stats card-round">
                                 <div class="card-body">
@@ -109,25 +136,6 @@
                                             <div class="numbers">
                                                 <p class="card-category">Ditolak</p>
                                                 <h4 class="card-title">{{ $totalDitolak }}</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card card-stats card-round">
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-5">
-                                            <div class="icon-big text-center">
-                                                <i class="fas fa-clock text-warning"></i>
-                                            </div>
-                                        </div>
-                                        <div class="col-7 col-stats">
-                                            <div class="numbers">
-                                                <p class="card-category">Menunggu</p>
-                                                <h4 class="card-title">{{ $totalMenunggu }}</h4>
                                             </div>
                                         </div>
                                     </div>
@@ -179,6 +187,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
+                                                @if(auth()->user()->role_id != 2 && auth()->user()->role_id != 3)
                                                 @foreach($latestKaryawanRequests as $request)
                                                     <tr>
                                                         <td>{{ $loop->iteration }}</td>
@@ -204,6 +213,9 @@
                                                         </td>
                                                     </tr>
                                                 @endforeach
+                                                @endif
+
+                                                @if(auth()->user()->role_id != 4 && auth()->user()->role_id != 5)
                                                 @foreach($latestDriverRequests as $request)
                                                     <tr>
                                                         <td>{{ $loop->iteration + count($latestKaryawanRequests) }}</td>
@@ -229,6 +241,7 @@
                                                         </td>
                                                     </tr>
                                                 @endforeach
+                                                @endif
                                             </tbody>
                                         </table>
                                     </div>

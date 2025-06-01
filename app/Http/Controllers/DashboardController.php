@@ -144,6 +144,8 @@ class DashboardController extends Controller
             'totalDisetujui',
             'totalDitolak',
             'totalRequest',
+            'totalKaryawanRequest',
+            'totalDriverRequest',
             'latestKaryawanRequests',
             'latestDriverRequests',
             'monthlyData'
