@@ -57,9 +57,20 @@
 				</div>
 				<div class="page-inner mt--5">
 					<div class="row mt--2">
+                        @php
+                            $totalCards = 2; // Default untuk status (disetujui & ditolak)
+                            if(auth()->user()->role_id != 4 && auth()->user()->role_id != 5) {
+                                $totalCards++;
+                            }
+                            if(auth()->user()->role_id != 2 && auth()->user()->role_id != 3) {
+                                $totalCards++;
+                            }
+                            $colClass = $totalCards == 4 ? 'col-md-3' : 'col-md-4';
+                        @endphp
+
                         <!-- Statistik Karyawan -->
                         @if(auth()->user()->role_id != 4 && auth()->user()->role_id != 5)
-                        <div class="col-md-3">
+                        <div class="{{ $colClass }}">
                             <div class="card card-stats card-round" style="cursor: pointer;" onclick="window.location.href='{{ route('request-karyawan.index') }}'">
                                 <div class="card-body">
                                     <div class="row">
@@ -82,7 +93,7 @@
 
                         <!-- Statistik Driver -->
                         @if(auth()->user()->role_id != 2 && auth()->user()->role_id != 3)
-                        <div class="col-md-3">
+                        <div class="{{ $colClass }}">
                             <div class="card card-stats card-round" style="cursor: pointer;" onclick="window.location.href='{{ route('request-driver.index') }}'">
                                 <div class="card-body">
                                     <div class="row">
@@ -104,7 +115,7 @@
                         @endif
 
                         <!-- Statistik Status -->
-                        <div class="col-md-3">
+                        <div class="{{ $colClass }}">
                             <div class="card card-stats card-round">
                                 <div class="card-body">
                                     <div class="row">
@@ -123,7 +134,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="{{ $colClass }}">
                             <div class="card card-stats card-round">
                                 <div class="card-body">
                                     <div class="row">
