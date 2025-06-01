@@ -14,8 +14,11 @@ class NotificationController extends Controller
      */
     public function index()
     {
-        $notifications = Notification::where('user_id', auth()->user()->id)->get();
-        return view('notifications.index', compact('notifications'));
+        $title = 'Data Notifikasi';
+        $notifications = Notification::where('user_id', auth()->user()->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+        return view('superadmin.notifications.index', compact('notifications', 'title'));
     }
 
     /**
@@ -48,5 +51,38 @@ class NotificationController extends Controller
 
         // Jika bukan AJAX, tampilkan view detail
         return view('notifications.show', compact('notification'));
+    }
+
+    /**
+     * Update notifikasi yang dipilih
+     * 
+     * @param Request $request
+     * @param int $id ID notifikasi
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function update(Request $request, $id)
+    {
+        // Validasi request
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'message' => 'required|string'
+        ]);
+
+        // Cari notifikasi berdasarkan ID
+        $notification = Notification::findOrFail($id);
+
+        // Cek apakah user adalah admin
+        if (auth()->user()->role->title !== 'admin') {
+            return redirect()->back()->with('error', 'Anda tidak memiliki akses untuk mengedit notifikasi');
+        }
+
+        // Update notifikasi
+        $notification->update([
+            'title' => $request->title,
+            'message' => $request->message
+        ]);
+
+        return redirect()->route('notifications.index')
+            ->with('success', 'Notifikasi berhasil diperbarui');
     }
 }

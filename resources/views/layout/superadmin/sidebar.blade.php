@@ -106,6 +106,22 @@
                         </div>
                     </li>
                     @endif
+                    <li class="nav-item {{ request()->is('notifications*') ? 'active' : '' }}">
+                        <a data-toggle="collapse" href="#submenuNotifications">
+                            <i class="fas fa-bell"></i>
+                            <p>Informasi</p>
+                            <span class="caret"></span>
+                        </a>
+                        <div class="collapse {{ request()->is('notifications*') ? 'show' : '' }}" id="submenuNotifications">
+                            <ul class="nav nav-collapse">
+                                <li data-name="Notifikasi" class="{{ request()->is('notifications*') ? 'active' : '' }}">
+                                    <a href="/notifications"> 
+                                        <span class="sub-item">Notifikasi</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
                 </ul>
             </div>
         </div>
