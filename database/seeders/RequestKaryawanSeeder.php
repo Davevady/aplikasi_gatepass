@@ -27,19 +27,85 @@ class RequestKaryawanSeeder extends Seeder
         foreach ($departemens as $departemen) {
             // Buat 3 data random untuk setiap departemen
             for ($i = 0; $i < 3; $i++) {
-                RequestKaryawan::create([
-                    'nama' => $names[array_rand($names)],
+                $nama = $names[array_rand($names)];
+                $keperluan = $keperluans[array_rand($keperluans)];
+                $jamOut = $jamOuts[array_rand($jamOuts)];
+                $jamIn = $jamIns[array_rand(array_filter($jamIns, function($jam) use ($jamOut) {
+                    return strtotime($jam) > strtotime($jamOut);
+                }))];
+                $accLead = $accStatuses[array_rand($accStatuses)];
+                $accHrGa = $accLead == 2 ? $accStatuses[array_rand($accStatuses)] : 1;
+                $accSecurityOut = ($accLead == 2 && $accHrGa == 2) ? $accStatuses[array_rand($accStatuses)] : 1;
+                $accSecurityIn = ($accLead == 2 && $accHrGa == 2 && $accSecurityOut == 2) ? $accStatuses[array_rand($accStatuses)] : 1;
+
+                $requestKaryawan = RequestKaryawan::create([
+                    'nama' => $nama,
                     'departemen_id' => $departemen->id,
-                    'keperluan' => $keperluans[array_rand($keperluans)],
-                    'jam_out' => $jamOut = $jamOuts[array_rand($jamOuts)],
-                    'jam_in' => $jamIns[array_rand(array_filter($jamIns, function($jam) use ($jamOut) {
-                        return strtotime($jam) > strtotime($jamOut);
-                    }))],
-                    'acc_lead' => $accStatuses[array_rand($accStatuses)],
-                    'acc_hr_ga' => 1,
-                    'acc_security_in' => 1,
-                    'acc_security_out' => 1,
+                    'keperluan' => $keperluan,
+                    'jam_out' => $jamOut,
+                    'jam_in' => $jamIn,
+                    'acc_lead' => $accLead,
+                    'acc_hr_ga' => $accHrGa,
+                    'acc_security_in' => $accSecurityIn,
+                    'acc_security_out' => $accSecurityOut,
                 ]);
+
+                // Buat notifikasi berdasarkan status approval
+                if ($accLead == 2) {
+                    \App\Models\Notification::create([
+                        'user_id' => 1, // Super Admin
+                        'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui Lead',
+                        'message' => 'Permohonan izin keluar atas nama ' . $nama . 
+                                   ' dari departemen ' . $departemen->name . 
+                                   ' untuk keperluan ' . $keperluan . 
+                                   ' telah disetujui oleh Lead dan menunggu persetujuan HR GA',
+                        'type' => 'karyawan',
+                        'status' => 'pending',
+                        'is_read' => false
+                    ]);
+                }
+
+                if ($accLead == 2 && $accHrGa == 2) {
+                    \App\Models\Notification::create([
+                        'user_id' => 1, // Super Admin
+                        'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui HR GA',
+                        'message' => 'Permohonan izin keluar atas nama ' . $nama . 
+                                   ' dari departemen ' . $departemen->name . 
+                                   ' untuk keperluan ' . $keperluan . 
+                                   ' telah disetujui oleh HR GA dan menunggu persetujuan Security Out',
+                        'type' => 'karyawan',
+                        'status' => 'pending',
+                        'is_read' => false
+                    ]);
+                }
+
+                if ($accLead == 2 && $accHrGa == 2 && $accSecurityOut == 2) {
+                    \App\Models\Notification::create([
+                        'user_id' => 1, // Super Admin
+                        'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui Security Out',
+                        'message' => 'Permohonan izin keluar atas nama ' . $nama . 
+                                   ' dari departemen ' . $departemen->name . 
+                                   ' untuk keperluan ' . $keperluan . 
+                                   ' telah disetujui oleh Security Out dan menunggu karyawan kembali',
+                        'type' => 'karyawan',
+                        'status' => 'pending',
+                        'is_read' => false
+                    ]);
+                }
+
+                if ($accLead == 2 && $accHrGa == 2 && $accSecurityOut == 2 && $accSecurityIn == 2) {
+                    \App\Models\Notification::create([
+                        'user_id' => 1, // Super Admin
+                        'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui Security In',
+                        'message' => 'Permohonan izin keluar atas nama ' . $nama . 
+                                   ' dari departemen ' . $departemen->name . 
+                                   ' untuk keperluan ' . $keperluan . 
+                                   ' telah disetujui oleh Security In dan permohonan selesai',
+                        'type' => 'karyawan',
+                        'status' => 'pending',
+                        'is_read' => false
+                    ]);
+                }
             }
         }
     }

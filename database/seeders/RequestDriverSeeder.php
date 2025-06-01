@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\RequestDriver;
+use App\Models\Notification;
 
 class RequestDriverSeeder extends Seeder
 {
@@ -32,9 +33,16 @@ class RequestDriverSeeder extends Seeder
                 return strtotime($jam) > strtotime($jamOut);
             }))];
 
-            RequestDriver::create([
-                'nama_ekspedisi' => $ekspedisis[array_rand($ekspedisis)],
-                'nopol_kendaraan' => $nopols[array_rand($nopols)],
+            $namaEkspedisi = $ekspedisis[array_rand($ekspedisis)];
+            $nopol = $nopols[array_rand($nopols)];
+            $accAdmin = $accStatuses[array_rand($accStatuses)];
+            $accHeadUnit = $accAdmin == 2 ? $accStatuses[array_rand($accStatuses)] : 1;
+            $accSecurityOut = ($accAdmin == 2 && $accHeadUnit == 2) ? $accStatuses[array_rand($accStatuses)] : 1;
+            $accSecurityIn = ($accAdmin == 2 && $accHeadUnit == 2 && $accSecurityOut == 2) ? $accStatuses[array_rand($accStatuses)] : 1;
+
+            $requestDriver = RequestDriver::create([
+                'nama_ekspedisi' => $namaEkspedisi,
+                'nopol_kendaraan' => $nopol,
                 'nama_driver' => $drivers[array_rand($drivers)],
                 'no_hp_driver' => $noHps[array_rand($noHps)],
                 'nama_kernet' => $kernets[array_rand($kernets)],
@@ -42,11 +50,92 @@ class RequestDriverSeeder extends Seeder
                 'keperluan' => $keperluans[array_rand($keperluans)],
                 'jam_out' => $jamOut,
                 'jam_in' => $jamIn,
-                'acc_admin' => $accStatuses[array_rand($accStatuses)],
-                'acc_head_unit' => 1,
-                'acc_security_in' => 1,
-                'acc_security_out' => 1,
+                'acc_admin' => $accAdmin,
+                'acc_head_unit' => $accHeadUnit,
+                'acc_security_in' => $accSecurityIn,
+                'acc_security_out' => $accSecurityOut,
             ]);
+
+            // Buat notifikasi berdasarkan status approval
+            if ($accAdmin == 2) {
+                // Notifikasi untuk Checker
+                $users = \App\Models\User::whereHas('role', function($query) {
+                    $query->whereIn('slug', ['head-unit', 'admin']);
+                })->get();
+
+                foreach($users as $user) {
+                    Notification::create([
+                        'user_id' => $user->id,
+                        'title' => 'Disetujui Checker',
+                        'message' => 'Permohonan izin driver ' . $namaEkspedisi . 
+                                   ' dengan nopol ' . $nopol . 
+                                   ' telah disetujui oleh Checker dan menunggu persetujuan Head Unit',
+                        'type' => 'driver',
+                        'status' => 'pending',
+                        'is_read' => false
+                    ]);
+                }
+
+                if ($accHeadUnit == 2) {
+                    // Notifikasi untuk Head Unit
+                    $users = \App\Models\User::whereHas('role', function($query) {
+                        $query->whereIn('slug', ['security', 'admin']);
+                    })->get();
+
+                    foreach($users as $user) {
+                        Notification::create([
+                            'user_id' => $user->id,
+                            'title' => 'Disetujui Head Unit',
+                            'message' => 'Permohonan izin driver ' . $namaEkspedisi . 
+                                       ' dengan nopol ' . $nopol . 
+                                       ' telah disetujui oleh Head Unit dan menunggu persetujuan Security Out',
+                            'type' => 'driver',
+                            'status' => 'pending',
+                            'is_read' => false
+                        ]);
+                    }
+
+                    if ($accSecurityOut == 2) {
+                        // Notifikasi untuk Security Out
+                        $users = \App\Models\User::whereHas('role', function($query) {
+                            $query->where('slug', 'admin');
+                        })->get();
+
+                        foreach($users as $user) {
+                            Notification::create([
+                                'user_id' => $user->id,
+                                'title' => 'Disetujui Security Out',
+                                'message' => 'Permohonan izin driver ' . $namaEkspedisi . 
+                                           ' dengan nopol ' . $nopol . 
+                                           ' telah disetujui oleh Security Out dan menunggu driver kembali',
+                                'type' => 'driver',
+                                'status' => 'pending',
+                                'is_read' => false
+                            ]);
+                        }
+
+                        if ($accSecurityIn == 2) {
+                            // Notifikasi untuk Security In
+                            $users = \App\Models\User::whereHas('role', function($query) {
+                                $query->where('slug', 'admin');
+                            })->get();
+
+                            foreach($users as $user) {
+                                Notification::create([
+                                    'user_id' => $user->id,
+                                    'title' => 'Disetujui Security In',
+                                    'message' => 'Permohonan izin driver ' . $namaEkspedisi . 
+                                               ' dengan nopol ' . $nopol . 
+                                               ' telah disetujui oleh Security In dan permohonan selesai',
+                                    'type' => 'driver',
+                                    'status' => 'pending',
+                                    'is_read' => false
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

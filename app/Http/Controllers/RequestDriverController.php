@@ -109,17 +109,24 @@ class RequestDriverController extends Controller
             // Buat request driver baru
             $requestDriver = RequestDriver::create($validated);
 
-            // Buat notifikasi untuk admin
-            Notification::create([
-                'user_id' => 1, // ID admin
-                'title' => 'Permohonan Izin Keluar Driver ' . $validated['nama_ekspedisi'],
-                'message' => 'Permohonan izin driver ' . $validated['nama_ekspedisi'] . 
-                           ' dengan nopol ' . $validated['nopol_kendaraan'] . 
-                           ' sedang menunggu persetujuan',
-                'type' => 'driver',
-                'status' => 'pending',
-                'is_read' => false
-            ]);
+            // Cari user dengan role admin, checker, head unit, dan security
+            $users = \App\Models\User::whereHas('role', function($query) {
+                $query->whereIn('slug', ['admin', 'checker', 'head-unit', 'security']);
+            })->get();
+
+            // Buat notifikasi untuk setiap user yang ditemukan
+            foreach($users as $user) {
+                Notification::create([
+                    'user_id' => $user->id,
+                    'title' => 'Permohonan Izin Keluar Driver ' . $validated['nama_ekspedisi'],
+                    'message' => 'Permohonan izin driver ' . $validated['nama_ekspedisi'] . 
+                               ' dengan nopol ' . $validated['nopol_kendaraan'] . 
+                               ' sedang menunggu persetujuan',
+                    'type' => 'driver',
+                    'status' => 'pending',
+                    'is_read' => false
+                ]);
+            }
 
             // Pesan sukses
             $successMessage = "Pengajuan izin driver berhasil dikirim.\n" .
@@ -177,21 +184,37 @@ class RequestDriverController extends Controller
                     $requestDriver->acc_admin = 2;
                     $notificationTitle = 'Disetujui Checker';
                     $notificationMessage = 'telah disetujui oleh Checker dan menunggu persetujuan Head Unit';
+                    // Cari user dengan role head unit dan admin
+                    $users = \App\Models\User::whereHas('role', function($query) {
+                        $query->whereIn('slug', ['head-unit', 'admin']);
+                    })->get();
                     break;
                 case 5: // Head Unit
                     $requestDriver->acc_head_unit = 2;
                     $notificationTitle = 'Disetujui Head Unit';
                     $notificationMessage = 'telah disetujui oleh Head Unit dan menunggu persetujuan Security Out';
+                    // Cari user dengan role security dan admin
+                    $users = \App\Models\User::whereHas('role', function($query) {
+                        $query->whereIn('slug', ['security', 'admin']);
+                    })->get();
                     break;
                 case 6: // Security
                     if ($requestDriver->acc_security_out == 1) {
                         $requestDriver->acc_security_out = 2;
                         $notificationTitle = 'Disetujui Security Out';
                         $notificationMessage = 'telah disetujui oleh Security Out dan menunggu driver kembali';
+                        // Cari user dengan role admin
+                        $users = \App\Models\User::whereHas('role', function($query) {
+                            $query->where('slug', 'admin');
+                        })->get();
                     } else {
                         $requestDriver->acc_security_in = 2;
                         $notificationTitle = 'Disetujui Security In';
                         $notificationMessage = 'telah disetujui oleh Security In dan permohonan selesai';
+                        // Cari user dengan role admin
+                        $users = \App\Models\User::whereHas('role', function($query) {
+                            $query->where('slug', 'admin');
+                        })->get();
                     }
                     break;
                 default:
@@ -204,17 +227,19 @@ class RequestDriverController extends Controller
             // Simpan perubahan
             $requestDriver->save();
 
-            // Buat notifikasi
-            Notification::create([
-                'user_id' => 1, // ID admin
-                'title' => 'Permohonan Izin Driver ' . $requestDriver->nama_ekspedisi . ' ' . $notificationTitle,
-                'message' => 'Permohonan izin driver ' . $requestDriver->nama_ekspedisi . 
-                           ' dengan nopol ' . $requestDriver->nopol_kendaraan . 
-                           ' ' . $notificationMessage,
-                'type' => 'driver',
-                'status' => 'pending',
-                'is_read' => false
-            ]);
+            // Buat notifikasi untuk setiap user yang ditemukan
+            foreach($users as $user) {
+                Notification::create([
+                    'user_id' => $user->id,
+                    'title' => $notificationTitle,
+                    'message' => 'Permohonan izin driver ' . $requestDriver->nama_ekspedisi . 
+                               ' dengan nopol ' . $requestDriver->nopol_kendaraan . 
+                               ' ' . $notificationMessage,
+                    'type' => 'driver',
+                    'status' => 'pending',
+                    'is_read' => false
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

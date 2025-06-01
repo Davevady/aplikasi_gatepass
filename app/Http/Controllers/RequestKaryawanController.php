@@ -194,18 +194,25 @@ class RequestKaryawanController extends Controller
             // Buat request karyawan baru
             $requestKaryawan = RequestKaryawan::create($validated);
 
-            // Buat notifikasi untuk admin
-            Notification::create([
-                'user_id' => 1, // ID admin
-                'title' => 'Permohonan Izin Keluar ' . $validated['nama'],
-                'message' => 'Permohonan izin keluar atas nama ' . $validated['nama'] . 
-                           ' dari departemen ' . Departemen::find($validated['departemen_id'])->name . 
-                           ' untuk keperluan ' . $validated['keperluan'] . 
-                           ' sedang menunggu persetujuan',
-                'type' => 'karyawan',
-                'status' => 'pending',
-                'is_read' => false
-            ]);
+            // Cari user dengan role admin, lead, hr-ga, dan security
+            $users = \App\Models\User::whereHas('role', function($query) {
+                $query->whereIn('slug', ['admin', 'lead', 'hr-ga', 'security']);
+            })->get();
+
+            // Buat notifikasi untuk setiap user yang ditemukan
+            foreach($users as $user) {
+                Notification::create([
+                    'user_id' => $user->id,
+                    'title' => 'Permohonan Izin Keluar ' . $validated['nama'],
+                    'message' => 'Permohonan izin keluar atas nama ' . $validated['nama'] . 
+                               ' dari departemen ' . Departemen::find($validated['departemen_id'])->name . 
+                               ' untuk keperluan ' . $validated['keperluan'] . 
+                               ' sedang menunggu persetujuan',
+                    'type' => 'karyawan',
+                    'status' => 'pending',
+                    'is_read' => false
+                ]);
+            }
 
             // Pesan sukses
             $successMessage = "Pengajuan izin karyawan berhasil dikirim.\n" .
@@ -262,21 +269,37 @@ class RequestKaryawanController extends Controller
                     $requestKaryawan->acc_lead = 2;
                     $notificationTitle = 'Disetujui Lead';
                     $notificationMessage = 'telah disetujui oleh Lead dan menunggu persetujuan HR GA';
+                    // Cari user dengan role HR GA dan admin
+                    $users = \App\Models\User::whereHas('role', function($query) {
+                        $query->whereIn('slug', ['hr-ga', 'admin']);
+                    })->get();
                     break;
                 case 3: // HR GA
                     $requestKaryawan->acc_hr_ga = 2;
                     $notificationTitle = 'Disetujui HR GA';
                     $notificationMessage = 'telah disetujui oleh HR GA dan menunggu persetujuan Security Out';
+                    // Cari user dengan role security dan admin
+                    $users = \App\Models\User::whereHas('role', function($query) {
+                        $query->whereIn('slug', ['security', 'admin']);
+                    })->get();
                     break;
                 case 6: // Security
                     if ($requestKaryawan->acc_security_out == 1) {
                         $requestKaryawan->acc_security_out = 2;
                         $notificationTitle = 'Disetujui Security Out';
                         $notificationMessage = 'telah disetujui oleh Security Out dan menunggu karyawan kembali';
+                        // Cari user dengan role admin
+                        $users = \App\Models\User::whereHas('role', function($query) {
+                            $query->where('slug', 'admin');
+                        })->get();
                     } else {
                         $requestKaryawan->acc_security_in = 2;
                         $notificationTitle = 'Disetujui Security In';
                         $notificationMessage = 'telah disetujui oleh Security In dan permohonan selesai';
+                        // Cari user dengan role admin
+                        $users = \App\Models\User::whereHas('role', function($query) {
+                            $query->where('slug', 'admin');
+                        })->get();
                     }
                     break;
                 default:
@@ -289,17 +312,19 @@ class RequestKaryawanController extends Controller
             // Simpan perubahan
             $requestKaryawan->save();
 
-            // Buat notifikasi
-            Notification::create([
-                'user_id' => 1, // ID admin
-                'title' => 'Permohonan Izin Keluar ' . $requestKaryawan->nama . ' ' . $notificationTitle,
-                'message' => 'Permohonan izin keluar atas nama ' . $requestKaryawan->nama . 
-                           ' dari departemen ' . $requestKaryawan->departemen->name . 
-                           ' ' . $notificationMessage,
-                'type' => 'karyawan',
-                'status' => 'pending',
-                'is_read' => false
-            ]);
+            // Buat notifikasi untuk setiap user yang ditemukan
+            foreach($users as $user) {
+                Notification::create([
+                    'user_id' => $user->id,
+                    'title' => 'Permohonan Izin Keluar ' . $requestKaryawan->nama . ' ' . $notificationTitle,
+                    'message' => 'Permohonan izin keluar atas nama ' . $requestKaryawan->nama . 
+                               ' dari departemen ' . $requestKaryawan->departemen->name . 
+                               ' ' . $notificationMessage,
+                    'type' => 'karyawan',
+                    'status' => 'pending',
+                    'is_read' => false
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
