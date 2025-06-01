@@ -181,27 +181,34 @@
                                                                         $status = 'warning';
                                                                         $text = 'Menunggu Head Unit';
                                                                     }
-                                                                    // Cek status hangus (jam in sudah lewat tapi belum keluar)
-                                                                    elseif($request->acc_admin == 2 && $request->acc_head_unit == 2 && $request->acc_security_out == 1 && \Carbon\Carbon::parse($request->jam_in)->isPast()) {
-                                                                        $status = 'danger';
-                                                                        $text = 'Hangus';
-                                                                    }
-                                                                    elseif($request->acc_admin == 2 && $request->acc_head_unit == 2 && $request->acc_security_out == 1) {
-                                                                        $status = 'info';
-                                                                        $text = 'Disetujui (Belum Keluar)';
-                                                                    }
-                                                                    // Cek status terlambat (sudah keluar tapi belum kembali)
-                                                                    elseif($request->acc_admin == 2 && $request->acc_head_unit == 2 && $request->acc_security_out == 2 && $request->acc_security_in == 1 && \Carbon\Carbon::parse($request->jam_in)->isPast()) {
-                                                                        $status = 'warning';
-                                                                        $text = 'Terlambat';
-                                                                    }
-                                                                    elseif($request->acc_admin == 2 && $request->acc_head_unit == 2 && $request->acc_security_out == 2 && $request->acc_security_in == 1) {
-                                                                        $status = 'info';
-                                                                        $text = 'Sudah Keluar (Belum Kembali)';
-                                                                    }
-                                                                    elseif($request->acc_admin == 2 && $request->acc_head_unit == 2 && $request->acc_security_out == 2 && $request->acc_security_in == 2) {
-                                                                        $status = 'success';
-                                                                        $text = 'Sudah Kembali';
+                                                                    // Jika sudah disetujui Admin dan Head Unit
+                                                                    elseif($request->acc_admin == 2 && $request->acc_head_unit == 2) {
+                                                                        // Cek status security
+                                                                        if($request->acc_security_out == 1) {
+                                                                             // Cek status hangus (jam in sudah lewat tapi belum keluar)
+                                                                            if (\Carbon\Carbon::parse($request->jam_in)->isPast()) {
+                                                                                $status = 'danger';
+                                                                                $text = 'Hangus';
+                                                                            } else {
+                                                                                $status = 'info';
+                                                                                $text = 'Disetujui (Belum Keluar)';
+                                                                            }
+                                                                        } elseif ($request->acc_security_out == 2) {
+                                                                            // Cek status security in
+                                                                            if ($request->acc_security_in == 1) {
+                                                                                // Cek status terlambat (sudah keluar tapi belum kembali)
+                                                                                if (\Carbon\Carbon::parse($request->jam_in)->isPast()) {
+                                                                                    $status = 'warning';
+                                                                                    $text = 'Terlambat';
+                                                                                } else {
+                                                                                    $status = 'info';
+                                                                                    $text = 'Sudah Keluar (Belum Kembali)';
+                                                                                }
+                                                                            } elseif ($request->acc_security_in == 2) {
+                                                                                $status = 'success';
+                                                                                $text = 'Sudah Kembali';
+                                                                            }
+                                                                        }
                                                                     }
                                                                 @endphp
                                                                 <span class="badge badge-{{ $status }}">{{ $text }}</span>

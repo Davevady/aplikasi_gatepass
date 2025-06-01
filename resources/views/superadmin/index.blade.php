@@ -65,12 +65,71 @@
                             if(auth()->user()->role_id != 2 && auth()->user()->role_id != 3) {
                                 $totalCards++;
                             }
-                            $colClass = $totalCards == 4 ? 'col-md-3' : 'col-md-4';
+                            $colClass = $totalCards == 5 ? 'col-md-3' : 'col-md-4';
                         @endphp
+
+                        <!-- Statistik Status -->
+                        <div class="col-md-4">
+                            <div class="card card-stats card-round">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-5">
+                                            <div class="icon-big text-center">
+                                                <i class="fas fa-clock text-warning"></i>
+                                            </div>
+                                        </div>
+                                        <div class="col-7 col-stats">
+                                            <div class="numbers">
+                                                <p class="card-category">Menunggu</p>
+                                                <h4 class="card-title">{{ $totalMenunggu }}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card card-stats card-round">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-5">
+                                            <div class="icon-big text-center">
+                                                <i class="fas fa-check-circle text-success"></i>
+                                            </div>
+                                        </div>
+                                        <div class="col-7 col-stats">
+                                            <div class="numbers">
+                                                <p class="card-category">Disetujui</p>
+                                                <h4 class="card-title">{{ $totalDisetujui }}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card card-stats card-round">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-5">
+                                            <div class="icon-big text-center">
+                                                <i class="fas fa-times-circle text-danger"></i>
+                                            </div>
+                                        </div>
+                                        <div class="col-7 col-stats">
+                                            <div class="numbers">
+                                                <p class="card-category">Ditolak</p>
+                                                <h4 class="card-title">{{ $totalDitolak }}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Statistik Karyawan -->
                         @if(auth()->user()->role_id != 4 && auth()->user()->role_id != 5)
-                        <div class="{{ $colClass }}">
+                        <div class="col-md-6">
                             <div class="card card-stats card-round" style="cursor: pointer;" onclick="window.location.href='{{ route('request-karyawan.index') }}'">
                                 <div class="card-body">
                                     <div class="row">
@@ -93,7 +152,7 @@
 
                         <!-- Statistik Driver -->
                         @if(auth()->user()->role_id != 2 && auth()->user()->role_id != 3)
-                        <div class="{{ $colClass }}">
+                        <div class="col-md-6">
                             <div class="card card-stats card-round" style="cursor: pointer;" onclick="window.location.href='{{ route('request-driver.index') }}'">
                                 <div class="card-body">
                                     <div class="row">
@@ -114,66 +173,54 @@
                         </div>
                         @endif
 
-                        <!-- Statistik Status -->
-                        <div class="{{ $colClass }}">
-                            <div class="card card-stats card-round">
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-5">
-                                            <div class="icon-big text-center">
-                                                <i class="fas fa-check-circle text-success"></i>
-                                            </div>
-                                        </div>
-                                        <div class="col-7 col-stats">
-                                            <div class="numbers">
-                                                <p class="card-category">Disetujui</p>
-                                                <h4 class="card-title">{{ $totalDisetujui }}</h4>
-                                            </div>
-                                        </div>
+                        <div class="row">
+                            <!-- Grafik Permohonan Bulanan -->
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <div class="card-title">Grafik Permohonan Bulanan</div>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="monthlyChart"></canvas>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="{{ $colClass }}">
-                            <div class="card card-stats card-round">
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-5">
-                                            <div class="icon-big text-center">
-                                                <i class="fas fa-times-circle text-danger"></i>
-                                            </div>
-                                        </div>
-                                        <div class="col-7 col-stats">
-                                            <div class="numbers">
-                                                <p class="card-category">Ditolak</p>
-                                                <h4 class="card-title">{{ $totalDitolak }}</h4>
-                                            </div>
-                                        </div>
+
+                            <div class="col-md-4">
+                                <!-- Grafik Status Permohonan -->
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <div class="card-title">Status Permohonan</div>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="statusChart"></canvas>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <!-- Grafik Permohonan Bulanan -->
-                        <div class="col-md-8">
-                            <div class="card">
-                                <div class="card-header">
-                                    <div class="card-title">Grafik Permohonan Bulanan</div>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="monthlyChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Grafik Status Permohonan -->
-                        <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <div class="card-title">Status Permohonan</div>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="statusChart"></canvas>
+                                <!-- Grafik Permohonan Per Minggu -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="card-title">Grafik Permohonan Per Minggu</div>
+                                            <select class="form-control" id="monthSelect" style="width: 200px;">
+                                                <option value="1">Januari</option>
+                                                <option value="2">Februari</option>
+                                                <option value="3">Maret</option>
+                                                <option value="4">April</option>
+                                                <option value="5">Mei</option>
+                                                <option value="6">Juni</option>
+                                                <option value="7">Juli</option>
+                                                <option value="8">Agustus</option>
+                                                <option value="9">September</option>
+                                                <option value="10">Oktober</option>
+                                                <option value="11">November</option>
+                                                <option value="12">Desember</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="weeklyChart"></canvas>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -182,7 +229,30 @@
                         <div class="col-md-12">
                             <div class="card">
                                 <div class="card-header">
-                                    <div class="card-title">Permohonan Terbaru</div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="card-title">Permohonan Terbaru</div>
+                                        <div class="d-flex">
+                                            <select class="form-control mr-2" id="filterMonth" style="width: 150px;">
+                                                <option value="1">Januari</option>
+                                                <option value="2">Februari</option>
+                                                <option value="3">Maret</option>
+                                                <option value="4">April</option>
+                                                <option value="5">Mei</option>
+                                                <option value="6">Juni</option>
+                                                <option value="7">Juli</option>
+                                                <option value="8">Agustus</option>
+                                                <option value="9">September</option>
+                                                <option value="10">Oktober</option>
+                                                <option value="11">November</option>
+                                                <option value="12">Desember</option>
+                                            </select>
+                                            <select class="form-control" id="filterYear" style="width: 100px;">
+                                                @foreach($years as $year)
+                                                    <option value="{{ $year }}">{{ $year }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
@@ -195,64 +265,10 @@
                                                     <th>Jam Keluar</th>
                                                     <th>Jam Kembali</th>
                                                     <th>Status</th>
+                                                    <th>Tipe</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
-                                                @if(auth()->user()->role_id != 2 && auth()->user()->role_id != 3)
-                                                @foreach($latestKaryawanRequests as $request)
-                                                    <tr>
-                                                        <td>{{ $loop->iteration }}</td>
-                                                        <td>{{ $request->nama }}</td>
-                                                        <td>{{ \Carbon\Carbon::parse($request->created_at)->format('d M Y') }}</td>
-                                                        <td>{{ $request->jam_out }}</td>
-                                                        <td>{{ $request->jam_in }}</td>
-                                                        <td>
-                                                            @php
-                                                                $status = 'warning';
-                                                                $text = 'Menunggu';
-                                                                
-                                                                if($request->acc_lead == 3 || $request->acc_hr_ga == 3 || $request->acc_security_out == 3 || $request->acc_security_in == 3) {
-                                                                    $status = 'danger';
-                                                                    $text = 'Ditolak';
-                                                                } 
-                                                                elseif($request->acc_lead == 2 && $request->acc_hr_ga == 2 && $request->acc_security_out == 2 && $request->acc_security_in == 2) {
-                                                                    $status = 'success';
-                                                                    $text = 'Disetujui';
-                                                                }
-                                                            @endphp
-                                                            <span class="badge badge-{{ $status }}">{{ $text }}</span>
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                                @endif
-
-                                                @if(auth()->user()->role_id != 4 && auth()->user()->role_id != 5)
-                                                @foreach($latestDriverRequests as $request)
-                                                    <tr>
-                                                        <td>{{ $loop->iteration + count($latestKaryawanRequests) }}</td>
-                                                        <td>{{ $request->nama_driver }}</td>
-                                                        <td>{{ \Carbon\Carbon::parse($request->created_at)->format('d M Y') }}</td>
-                                                        <td>{{ $request->jam_out }}</td>
-                                                        <td>{{ $request->jam_in }}</td>
-                                                        <td>
-                                                            @php
-                                                                $status = 'warning';
-                                                                $text = 'Menunggu';
-                                                                
-                                                                if($request->acc_admin == 3 || $request->acc_head_unit == 3 || $request->acc_security_out == 3 || $request->acc_security_in == 3) {
-                                                                    $status = 'danger';
-                                                                    $text = 'Ditolak';
-                                                                } 
-                                                                elseif($request->acc_admin == 2 && $request->acc_head_unit == 2 && $request->acc_security_out == 2 && $request->acc_security_in == 2) {
-                                                                    $status = 'success';
-                                                                    $text = 'Disetujui';
-                                                                }
-                                                            @endphp
-                                                            <span class="badge badge-{{ $status }}">{{ $text }}</span>
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                                @endif
+                                            <tbody id="latestRequestsTable">
                                             </tbody>
                                         </table>
                                     </div>
@@ -287,6 +303,7 @@
                                     <th>Jam Keluar</th>
                                     <th>Jam Kembali</th>
                                     <th>Tipe</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -313,10 +330,24 @@
 
             // Fungsi untuk menampilkan modal status
             function showStatusModal(status) {
-                $('#statusModalLabel').text(status === 'disetujui' ? 'Data Permohonan Disetujui' : 'Data Permohonan Ditolak');
+                let title = '';
+                switch(status) {
+                    case 'menunggu':
+                        title = 'Data Permohonan Menunggu';
+                        break;
+                    case 'disetujui':
+                        title = 'Data Permohonan Disetujui';
+                        break;
+                    case 'ditolak':
+                        title = 'Data Permohonan Ditolak';
+                        break;
+                }
+                
+                $('#statusModalLabel').text(title);
                 $('#statusTable tbody').empty();
                 
                 $.get(`/dashboard/status/${status}`, function(data) {
+                    $('#statusTable tbody').empty();
                     data.forEach((item, index) => {
                         $('#statusTable tbody').append(`
                             <tr>
@@ -327,6 +358,7 @@
                                 <td>${item.jam_out}</td>
                                 <td>${item.jam_in}</td>
                                 <td>${item.tipe}</td>
+                                <td><span class="badge badge-${item.status}">${item.text}</span></td>
                             </tr>
                         `);
                     });
@@ -334,6 +366,11 @@
                 
                 $('#statusModal').modal('show');
             }
+
+            // Event click untuk card menunggu
+            $('.card-stats:has(.fa-clock)').click(function() {
+                showStatusModal('menunggu');
+            });
 
             // Event click untuk card disetujui
             $('.card-stats:has(.fa-check-circle)').click(function() {
@@ -344,6 +381,105 @@
             $('.card-stats:has(.fa-times-circle)').click(function() {
                 showStatusModal('ditolak');
             });
+
+            // Fungsi untuk memuat data permohonan terbaru
+            function loadLatestRequests() {
+                const month = $('#filterMonth').val();
+                const year = $('#filterYear').val();
+                
+                $.get(`/dashboard/latest-requests?month=${month}&year=${year}`, function(data) {
+                    $('#latestRequestsTable').empty();
+                    data.forEach((item, index) => {
+                        $('#latestRequestsTable').append(`
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${item.nama}</td>
+                                <td>${item.tanggal}</td>
+                                <td>${item.jam_out}</td>
+                                <td>${item.jam_in}</td>
+                                <td><span class="badge badge-${item.status}">${item.text}</span></td>
+                                <td>${item.tipe}</td>
+                            </tr>
+                        `);
+                    });
+                });
+            }
+
+            // Set bulan dan tahun saat ini sebagai default
+            const currentDate = new Date();
+            $('#filterMonth').val(currentDate.getMonth() + 1);
+            $('#filterYear').val(currentDate.getFullYear());
+
+            // Load data awal
+            loadLatestRequests();
+
+            // Event change untuk filter
+            $('#filterMonth, #filterYear').change(function() {
+                loadLatestRequests();
+            });
+
+            // Inisialisasi grafik per minggu
+            let weeklyChart = null;
+            const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            
+            function updateWeeklyChart(month) {
+                $.get(`/dashboard/weekly/${month}`, function(data) {
+                    const weeks = Object.keys(data.karyawan).map(week => `Minggu ${week}`);
+                    
+                    if (weeklyChart) {
+                        weeklyChart.destroy();
+                    }
+
+                    const ctx = document.getElementById('weeklyChart').getContext('2d');
+                    weeklyChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: weeks,
+                            datasets: [
+                                @if(auth()->user()->role_id != 4 && auth()->user()->role_id != 5)
+                                {
+                                    label: 'Permohonan Karyawan',
+                                    data: Object.values(data.karyawan),
+                                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                                    borderColor: 'rgb(75, 192, 192)',
+                                    borderWidth: 1
+                                },
+                                @endif
+                                @if(auth()->user()->role_id != 2 && auth()->user()->role_id != 3)
+                                {
+                                    label: 'Permohonan Driver',
+                                    data: Object.values(data.driver),
+                                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                                    borderColor: 'rgb(255, 99, 132)',
+                                    borderWidth: 1
+                                }
+                                @endif
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+
+            // Set bulan saat ini sebagai default
+            const currentMonth = new Date().getMonth() + 1;
+            $('#monthSelect').val(currentMonth);
+            updateWeeklyChart(currentMonth);
+
+            // Event change untuk select bulan
+            $('#monthSelect').change(function() {
+                updateWeeklyChart($(this).val());
+            });
         });
 
         // Grafik Permohonan Bulanan
@@ -352,44 +488,50 @@
             type: 'line',
             data: {
                 labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-                datasets: [{
-                    label: 'Permohonan Karyawan',
-                    data: [
-                        {{ $monthlyData['karyawan'][1] }},
-                        {{ $monthlyData['karyawan'][2] }},
-                        {{ $monthlyData['karyawan'][3] }},
-                        {{ $monthlyData['karyawan'][4] }},
-                        {{ $monthlyData['karyawan'][5] }},
-                        {{ $monthlyData['karyawan'][6] }},
-                        {{ $monthlyData['karyawan'][7] }},
-                        {{ $monthlyData['karyawan'][8] }},
-                        {{ $monthlyData['karyawan'][9] }},
-                        {{ $monthlyData['karyawan'][10] }},
-                        {{ $monthlyData['karyawan'][11] }},
-                        {{ $monthlyData['karyawan'][12] }}
-                    ],
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
-                },
-                {
-                    label: 'Permohonan Driver',
-                    data: [
-                        {{ $monthlyData['driver'][1] }},
-                        {{ $monthlyData['driver'][2] }},
-                        {{ $monthlyData['driver'][3] }},
-                        {{ $monthlyData['driver'][4] }},
-                        {{ $monthlyData['driver'][5] }},
-                        {{ $monthlyData['driver'][6] }},
-                        {{ $monthlyData['driver'][7] }},
-                        {{ $monthlyData['driver'][8] }},
-                        {{ $monthlyData['driver'][9] }},
-                        {{ $monthlyData['driver'][10] }},
-                        {{ $monthlyData['driver'][11] }},
-                        {{ $monthlyData['driver'][12] }}
-                    ],
-                    borderColor: 'rgb(255, 99, 132)',
-                    tension: 0.1
-                }]
+                datasets: [
+                    @if(auth()->user()->role_id != 4 && auth()->user()->role_id != 5)
+                    {
+                        label: 'Permohonan Karyawan',
+                        data: [
+                            {{ $monthlyData['karyawan'][1] }},
+                            {{ $monthlyData['karyawan'][2] }},
+                            {{ $monthlyData['karyawan'][3] }},
+                            {{ $monthlyData['karyawan'][4] }},
+                            {{ $monthlyData['karyawan'][5] }},
+                            {{ $monthlyData['karyawan'][6] }},
+                            {{ $monthlyData['karyawan'][7] }},
+                            {{ $monthlyData['karyawan'][8] }},
+                            {{ $monthlyData['karyawan'][9] }},
+                            {{ $monthlyData['karyawan'][10] }},
+                            {{ $monthlyData['karyawan'][11] }},
+                            {{ $monthlyData['karyawan'][12] }}
+                        ],
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    },
+                    @endif
+                    @if(auth()->user()->role_id != 2 && auth()->user()->role_id != 3)
+                    {
+                        label: 'Permohonan Driver',
+                        data: [
+                            {{ $monthlyData['driver'][1] }},
+                            {{ $monthlyData['driver'][2] }},
+                            {{ $monthlyData['driver'][3] }},
+                            {{ $monthlyData['driver'][4] }},
+                            {{ $monthlyData['driver'][5] }},
+                            {{ $monthlyData['driver'][6] }},
+                            {{ $monthlyData['driver'][7] }},
+                            {{ $monthlyData['driver'][8] }},
+                            {{ $monthlyData['driver'][9] }},
+                            {{ $monthlyData['driver'][10] }},
+                            {{ $monthlyData['driver'][11] }},
+                            {{ $monthlyData['driver'][12] }}
+                        ],
+                        borderColor: 'rgb(255, 99, 132)',
+                        tension: 0.1
+                    }
+                    @endif
+                ]
             },
             options: {
                 responsive: true,

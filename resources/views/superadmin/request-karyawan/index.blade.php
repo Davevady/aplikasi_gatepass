@@ -142,109 +142,128 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    @php
-                                                        $counter = 1;
-                                                    @endphp
-                                                    @foreach($departemens as $departemen)
-                                                        @if(isset($departemen->requestKaryawans) && count($departemen->requestKaryawans) > 0)
-                                                            @foreach($departemen->requestKaryawans as $request)
-                                                                <tr>
-                                                                    <td>{{ $counter++ }}</td>
-                                                                    <td>{{ $departemen->name }}</td>
-                                                                    <td>{{ $request->nama }}</td>
-                                                                    <td>{{ \Carbon\Carbon::parse($request->created_at)->format('d/m/Y') }}</td>
-                                                                    <td>{{ $request->jam_out }}</td>
-                                                                    <td>{{ $request->jam_in }}</td>
-                                                                    <td>{{ $request->keperluan }}</td>
-                                                                    <td>
-                                                                        @php
-                                                                            $status = 'warning'; // default menunggu
-                                                                            $text = 'Menunggu';
-                                                                            
-                                                                            // Cek jika ada yang menolak
-                                                                            if($request->acc_lead == 3) {
-                                                                                $status = 'danger';
-                                                                                $text = 'Ditolak Lead';
-                                                                            } 
-                                                                            elseif($request->acc_hr_ga == 3) {
-                                                                                $status = 'danger';
-                                                                                $text = 'Ditolak HR GA';
+                                                    @if(isset($requestKaryawans) && count($requestKaryawans) > 0)
+                                                        @php
+                                                            $counter = 1;
+                                                        @endphp
+                                                        @foreach($requestKaryawans as $request)
+                                                            <tr>
+                                                                <td>{{ $counter++ }}</td>
+                                                                <td>{{ $request->departemen->name }}</td>
+                                                                <td>{{ $request->nama }}</td>
+                                                                <td>{{ \Carbon\Carbon::parse($request->created_at)->format('d/m/Y') }}</td>
+                                                                <td>{{ $request->jam_out }}</td>
+                                                                <td>{{ $request->jam_in }}</td>
+                                                                <td>{{ $request->keperluan }}</td>
+                                                                <td>
+                                                                    @php
+                                                                        $status = 'warning'; // default menunggu
+                                                                        $text = 'Menunggu';
+                                                                        
+                                                                        // Cek jika ada yang menolak
+                                                                        if($request->acc_lead == 3) {
+                                                                            $status = 'danger';
+                                                                            $text = 'Ditolak Lead';
+                                                                        } 
+                                                                        elseif($request->acc_hr_ga == 3) {
+                                                                            $status = 'danger';
+                                                                            $text = 'Ditolak HR GA';
+                                                                        }
+                                                                        // Cek urutan persetujuan sesuai alur jika tidak ditolak
+                                                                        elseif($request->acc_lead == 1) {
+                                                                            $status = 'warning';
+                                                                            $text = 'Menunggu Lead';
+                                                                        }
+                                                                        elseif($request->acc_lead == 2 && $request->acc_hr_ga == 1) {
+                                                                            $status = 'warning';
+                                                                            $text = 'Menunggu HR GA';
+                                                                        }
+                                                                        // Jika sudah disetujui Lead dan HR GA
+                                                                        elseif($request->acc_lead == 2 && $request->acc_hr_ga == 2) {
+                                                                            // Cek status security
+                                                                            if($request->acc_security_out == 1) {
+                                                                                 // Cek status hangus (jam in sudah lewat tapi belum keluar)
+                                                                                if (\Carbon\Carbon::parse($request->jam_in)->isPast()) {
+                                                                                    $status = 'danger';
+                                                                                    $text = 'Hangus';
+                                                                                } else {
+                                                                                    $status = 'info';
+                                                                                    $text = 'Disetujui (Belum Keluar)';
+                                                                                }
+                                                                            } elseif ($request->acc_security_out == 2) {
+                                                                                // Cek status security in
+                                                                                if ($request->acc_security_in == 1) {
+                                                                                    // Cek status terlambat (sudah keluar tapi belum kembali)
+                                                                                    if (\Carbon\Carbon::parse($request->jam_in)->isPast()) {
+                                                                                        $status = 'warning';
+                                                                                        $text = 'Terlambat';
+                                                                                    } else {
+                                                                                        $status = 'info';
+                                                                                        $text = 'Sudah Keluar (Belum Kembali)';
+                                                                                    }
+                                                                                } elseif ($request->acc_security_in == 2) {
+                                                                                    $status = 'success';
+                                                                                    $text = 'Sudah Kembali';
+                                                                                }
                                                                             }
-                                                                            // Cek urutan persetujuan sesuai alur
-                                                                            elseif($request->acc_lead == 1) {
-                                                                                $status = 'warning';
-                                                                                $text = 'Menunggu Lead';
-                                                                            }
-                                                                            elseif($request->acc_lead == 2 && $request->acc_hr_ga == 1) {
-                                                                                $status = 'warning';
-                                                                                $text = 'Menunggu HR GA';
-                                                                            }
-                                                                            elseif($request->acc_lead == 2 && $request->acc_hr_ga == 2 && $request->acc_security_out == 1) {
-                                                                                $status = 'info';
-                                                                                $text = 'Disetujui (Belum Keluar)';
-                                                                            }
-                                                                            elseif($request->acc_lead == 2 && $request->acc_hr_ga == 2 && $request->acc_security_out == 2 && $request->acc_security_in == 1) {
-                                                                                $status = 'info';
-                                                                                $text = 'Sudah Keluar (Belum Kembali)';
-                                                                            }
-                                                                            elseif($request->acc_lead == 2 && $request->acc_hr_ga == 2 && $request->acc_security_out == 2 && $request->acc_security_in == 2) {
-                                                                                $status = 'success';
-                                                                                $text = 'Sudah Kembali';
-                                                                            }
-                                                                        @endphp
-                                                                        <span class="badge badge-{{ $status }}">{{ $text }}</span>
-                                                                    </td>
-                                                                    <td>
-                                                                        <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#detailModal" 
-                                                                                data-nama="{{ $request->nama }}"
-                                                                                data-departemen="{{ $departemen->name }}"
-                                                                                data-tanggal="{{ \Carbon\Carbon::parse($request->created_at)->format('d/m/Y') }}"
-                                                                                data-jam-keluar="{{ $request->jam_out }}"
-                                                                                data-jam-kembali="{{ $request->jam_in }}"
-                                                                                data-keperluan="{{ $request->keperluan }}"
-                                                                                data-acc-lead="{{ $request->acc_lead }}"
-                                                                                data-acc-hr-ga="{{ $request->acc_hr_ga }}"
-                                                                                data-acc-security-out="{{ $request->acc_security_out }}"
-                                                                                data-acc-security-in="{{ $request->acc_security_in }}">
-                                                                                <i class="fas fa-eye"></i> Detail
-                                                                            </button>
-                                                                            {{-- Tombol ACC untuk Role Lead --}}
-                                                                            @if(auth()->user()->role_id == 2 && $request->acc_lead == 1)
+                                                                        }
+                                                                    @endphp
+                                                                    <span class="badge badge-{{ $status }}">{{ $text }}</span>
+                                                                </td>
+                                                                <td>
+                                                                    <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#detailModal" 
+                                                                            data-nama="{{ $request->nama }}"
+                                                                            data-departemen="{{ $request->departemen->name }}"
+                                                                            data-tanggal="{{ \Carbon\Carbon::parse($request->created_at)->format('d/m/Y') }}"
+                                                                            data-jam-keluar="{{ $request->jam_out }}"
+                                                                            data-jam-kembali="{{ $request->jam_in }}"
+                                                                            data-keperluan="{{ $request->keperluan }}"
+                                                                            data-acc-lead="{{ $request->acc_lead }}"
+                                                                            data-acc-hr-ga="{{ $request->acc_hr_ga }}"
+                                                                            data-acc-security-out="{{ $request->acc_security_out }}"
+                                                                            data-acc-security-in="{{ $request->acc_security_in }}">
+                                                                            <i class="fas fa-eye"></i> Detail
+                                                                        </button>
+                                                                        {{-- Tombol ACC untuk Role Lead --}}
+                                                                        @if(auth()->user()->role_id == 2 && $request->acc_lead == 1)
+                                                                        <button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                                                data-id="{{ $request->id }}"
+                                                                                data-role-id="{{ auth()->user()->role_id }}">
+                                                                            <i class="fas fa-check"></i> ACC
+                                                                        </button>
+                                                                        {{-- Tombol ACC untuk Role HR GA --}}
+                                                                        @elseif(auth()->user()->role_id == 3 && $request->acc_hr_ga == 1 && $request->acc_lead == 2)
+                                                                        <button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                                                data-id="{{ $request->id }}"
+                                                                                data-role-id="{{ auth()->user()->role_id }}">
+                                                                            <i class="fas fa-check"></i> ACC
+                                                                        </button>
+                                                                        {{-- Tombol ACC untuk Role Security --}}
+                                                                        @elseif(auth()->user()->role_id == 6 && $request->acc_lead == 2 && $request->acc_hr_ga == 2)
+                                                                            @if($request->acc_security_out == 1)
+                                                                            {{-- Tombol ACC Out --}}
                                                                             <button type="button" class="btn btn-sm btn-success acc-btn" 
                                                                                     data-id="{{ $request->id }}"
                                                                                     data-role-id="{{ auth()->user()->role_id }}">
-                                                                                <i class="fas fa-check"></i> ACC
+                                                                                <i class="fas fa-sign-out-alt"></i> ACC Out
                                                                             </button>
-                                                                            {{-- Tombol ACC untuk Role HR GA --}}
-                                                                            @elseif(auth()->user()->role_id == 3 && $request->acc_hr_ga == 1 && $request->acc_lead == 2)
+                                                                            @elseif($request->acc_security_out == 2 && $request->acc_security_in == 1)
+                                                                            {{-- Tombol ACC In --}}
                                                                             <button type="button" class="btn btn-sm btn-success acc-btn" 
                                                                                     data-id="{{ $request->id }}"
                                                                                     data-role-id="{{ auth()->user()->role_id }}">
-                                                                                <i class="fas fa-check"></i> ACC
+                                                                                <i class="fas fa-sign-in-alt"></i> ACC In
                                                                             </button>
-                                                                            {{-- Tombol ACC untuk Role Security --}}
-                                                                            @elseif(auth()->user()->role_id == 6 && $request->acc_lead == 2 && $request->acc_hr_ga == 2)
-                                                                                @if($request->acc_security_out == 1)
-                                                                                {{-- Tombol ACC Out --}}
-                                                                                <button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                                                        data-id="{{ $request->id }}"
-                                                                                        data-role-id="{{ auth()->user()->role_id }}">
-                                                                                    <i class="fas fa-sign-out-alt"></i> ACC Out
-                                                                                </button>
-                                                                                @elseif($request->acc_security_out == 2 && $request->acc_security_in == 1)
-                                                                                {{-- Tombol ACC In --}}
-                                                                                <button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                                                        data-id="{{ $request->id }}"
-                                                                                        data-role-id="{{ auth()->user()->role_id }}">
-                                                                                    <i class="fas fa-sign-in-alt"></i> ACC In
-                                                                                </button>
-                                                                                @endif
                                                                             @endif
-                                                                    </td>
-                                                                </tr>
-                                                            @endforeach
-                                                        @endif
-                                                    @endforeach
+                                                                        @endif
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    @else
+                                                        <tr>
+                                                            <td colspan="9" class="text-center">Tidak ada data permohonan izin</td>
+                                                        </tr>
+                                                    @endif
                                                 </tbody>
                                             </table>
                                         </div>

@@ -25,6 +25,10 @@ class RequestKaryawanSeeder extends Seeder
         $jamIns = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
         $accStatuses = [1, 2, 3]; // 1 = menunggu, 2 = disetujui, 3 = ditolak
 
+        // Generate random date within last 90 days
+        $endDate = now();
+        $startDate = now()->subDays(90);
+
         foreach ($departemens as $departemen) {
             // Buat 3 data random untuk setiap departemen
             for ($i = 0; $i < 3; $i++) {
@@ -39,6 +43,10 @@ class RequestKaryawanSeeder extends Seeder
                 $accSecurityOut = ($accLead == 2 && $accHrGa == 2) ? $accStatuses[array_rand($accStatuses)] : 1;
                 $accSecurityIn = ($accLead == 2 && $accHrGa == 2 && $accSecurityOut == 2) ? $accStatuses[array_rand($accStatuses)] : 1;
 
+                // Generate random timestamp between start and end date
+                $randomTimestamp = $startDate->timestamp + rand(0, $endDate->timestamp - $startDate->timestamp);
+                $createdAt = date('Y-m-d H:i:s', $randomTimestamp);
+
                 $requestKaryawan = RequestKaryawan::create([
                     'nama' => $nama,
                     'departemen_id' => $departemen->id,
@@ -49,6 +57,8 @@ class RequestKaryawanSeeder extends Seeder
                     'acc_hr_ga' => $accHrGa,
                     'acc_security_in' => $accSecurityIn,
                     'acc_security_out' => $accSecurityOut,
+                    'created_at' => $createdAt,
+                    'updated_at' => $createdAt
                 ]);
 
                 // Notifikasi awal untuk Lead
@@ -66,7 +76,9 @@ class RequestKaryawanSeeder extends Seeder
                                    ' sedang menunggu persetujuan',
                         'type' => 'karyawan',
                         'status' => 'pending',
-                        'is_read' => false
+                        'is_read' => false,
+                        'created_at' => $createdAt,
+                        'updated_at' => $createdAt
                     ]);
                 }
 
@@ -87,7 +99,9 @@ class RequestKaryawanSeeder extends Seeder
                                        ' telah disetujui oleh Lead dan menunggu persetujuan HR GA',
                             'type' => 'karyawan',
                             'status' => 'pending',
-                            'is_read' => false
+                            'is_read' => false,
+                            'created_at' => $createdAt,
+                            'updated_at' => $createdAt
                         ]);
                     }
                 } elseif ($accLead == 3) {
@@ -106,7 +120,9 @@ class RequestKaryawanSeeder extends Seeder
                                        ' telah ditolak oleh Lead',
                             'type' => 'karyawan',
                             'status' => 'pending',
-                            'is_read' => false
+                            'is_read' => false,
+                            'created_at' => $createdAt,
+                            'updated_at' => $createdAt
                         ]);
                     }
                 }
@@ -127,7 +143,9 @@ class RequestKaryawanSeeder extends Seeder
                                        ' telah disetujui oleh HR GA dan menunggu persetujuan Security Out',
                             'type' => 'karyawan',
                             'status' => 'pending',
-                            'is_read' => false
+                            'is_read' => false,
+                            'created_at' => $createdAt,
+                            'updated_at' => $createdAt
                         ]);
                     }
                 } elseif ($accLead == 2 && $accHrGa == 3) {
@@ -146,7 +164,9 @@ class RequestKaryawanSeeder extends Seeder
                                        ' telah ditolak oleh HR GA',
                             'type' => 'karyawan',
                             'status' => 'pending',
-                            'is_read' => false
+                            'is_read' => false,
+                            'created_at' => $createdAt,
+                            'updated_at' => $createdAt
                         ]);
                     }
                 }

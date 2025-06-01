@@ -34,6 +34,8 @@ Route::get('/logout', [UserController::class, 'logout'])->name('logout');
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/status/{status}', [DashboardController::class, 'getStatusData'])->name('dashboard.status');
+    Route::get('/dashboard/weekly/{month}', [DashboardController::class, 'getWeeklyData'])->name('dashboard.weekly');
+    Route::get('/dashboard/latest-requests', [DashboardController::class, 'getLatestRequests'])->name('dashboard.latest-requests');
     
     // request karyawan - hanya bisa diakses admin, security, lead, hr-ga
     Route::middleware(['role:admin,security,lead,hr-ga'])->group(function () {

@@ -40,6 +40,10 @@ class RequestDriverSeeder extends Seeder
             $accSecurityOut = ($accAdmin == 2 && $accHeadUnit == 2) ? $accStatuses[array_rand($accStatuses)] : 1;
             $accSecurityIn = ($accAdmin == 2 && $accHeadUnit == 2 && $accSecurityOut == 2) ? $accStatuses[array_rand($accStatuses)] : 1;
 
+            // Generate random date within last 90 days
+            $randomDays = rand(0, 90);
+            $createdAt = now()->subDays($randomDays);
+
             $requestDriver = RequestDriver::create([
                 'nama_ekspedisi' => $namaEkspedisi,
                 'nopol_kendaraan' => $nopol,
@@ -54,6 +58,8 @@ class RequestDriverSeeder extends Seeder
                 'acc_head_unit' => $accHeadUnit,
                 'acc_security_in' => $accSecurityIn,
                 'acc_security_out' => $accSecurityOut,
+                'created_at' => $createdAt,
+                'updated_at' => $createdAt
             ]);
 
             // Buat notifikasi berdasarkan status approval
@@ -72,7 +78,9 @@ class RequestDriverSeeder extends Seeder
                                    ' telah disetujui oleh Checker dan menunggu persetujuan Head Unit',
                         'type' => 'driver',
                         'status' => 'pending',
-                        'is_read' => false
+                        'is_read' => false,
+                        'created_at' => $createdAt,
+                        'updated_at' => $createdAt
                     ]);
                 }
 
@@ -91,7 +99,9 @@ class RequestDriverSeeder extends Seeder
                                        ' telah disetujui oleh Head Unit dan menunggu persetujuan Security Out',
                             'type' => 'driver',
                             'status' => 'pending',
-                            'is_read' => false
+                            'is_read' => false,
+                            'created_at' => $createdAt,
+                            'updated_at' => $createdAt
                         ]);
                     }
 
@@ -110,7 +120,9 @@ class RequestDriverSeeder extends Seeder
                                            ' telah disetujui oleh Security Out dan menunggu driver kembali',
                                 'type' => 'driver',
                                 'status' => 'pending',
-                                'is_read' => false
+                                'is_read' => false,
+                                'created_at' => $createdAt,
+                                'updated_at' => $createdAt
                             ]);
                         }
 
@@ -130,7 +142,9 @@ class RequestDriverSeeder extends Seeder
                                                ' telah disetujui oleh Security In dan permohonan selesai',
                                     'type' => 'driver',
                                     'status' => 'approved',
-                                    'is_read' => false
+                                    'is_read' => false,
+                                    'created_at' => $createdAt,
+                                    'updated_at' => $createdAt
                                 ]);
                             }
                         }

@@ -16,44 +16,57 @@ class RequestDriverController extends Controller
     public function index()
     {
         $title = 'Permohonan Izin Keluar Driver';
+        $user = auth()->user();
+        $requestDrivers = collect(); // Inisialisasi collection kosong
+
+        // Ambil data permohonan driver berdasarkan role
+        if ($user->role_id != 2 && $user->role_id != 3) { // Bukan role lead dan hr-ga
+            $requestDrivers = RequestDriver::get();
+        }
         
-        // Mengambil data yang masih memiliki status menunggu (value 1)
-        $requestDrivers = RequestDriver::where(function($query) {
-            $query->where('acc_admin', 1) // Admin belum menyetujui
-                ->orWhere('acc_head_unit', 1) // Head Unit belum menyetujui
-                ->orWhere('acc_security_out', 1) // Security Out belum menyetujui
-                ->orWhere('acc_security_in', 1); // Security In belum menyetujui
-        })->get();
+        // Menghitung total request berdasarkan status untuk permohonan yang terlihat oleh user
+        $totalMenunggu = 0;
+        $totalDisetujui = 0;
+        $totalDitolak = 0;
+        $totalRequest = 0;
+
+        if ($user->role_id != 2 && $user->role_id != 3) { // Bukan role lead dan hr-ga
+             // Permohonan Menunggu Driver: Belum disetujui semua pihak DAN belum ditolak oleh siapapun DAN belum keluar security
+             $totalMenunggu = RequestDriver::where(function($query) {
+                $query->where(function($q) {
+                    $q->where('acc_admin', 1) // Admin belum menyetujui
+                      ->orWhere('acc_head_unit', 1) // Head Unit belum menyetujui setelah Admin acc
+                      ->orWhere('acc_security_out', 1); // Security Out belum menyetujui setelah Head Unit acc
+                })
+                ->where('acc_admin', '!=', 3)
+                ->where('acc_head_unit', '!=', 3)
+                ->where('acc_security_out', '!=', 3)
+                ->where('acc_security_in', '!=', 3);
+             })
+             ->count();
+                
+            // Permohonan Disetujui Driver: Sudah disetujui Admin, Head Unit, dan Security Out (baik sudah kembali atau belum)
+            $totalDisetujui = RequestDriver::where('acc_admin', 2)
+                ->where('acc_head_unit', 2)
+                ->where('acc_security_out', 2)
+                ->count();
+                
+            // Permohonan Ditolak Driver: Ditolak oleh salah satu pihak
+            $totalDitolak = RequestDriver::where(function($query) {
+                $query->where('acc_admin', 3) // Admin menolak
+                    ->orWhere('acc_head_unit', 3) // Head Unit menolak
+                    ->orWhere('acc_security_out', 3) // Security Out menolak
+                    ->orWhere('acc_security_in', 3); // Security In menolak
+            })->count();
+                
+            // Total semua request driver yang terlihat oleh user
+            $totalRequest = RequestDriver::count();
+        }
         
-        // Menghitung total request berdasarkan status
-        $totalMenunggu = RequestDriver::where(function($query) {
-            $query->where('acc_admin', 1) // Admin belum menyetujui
-                ->orWhere('acc_head_unit', 1) // Head Unit belum menyetujui
-                ->orWhere('acc_security_out', 1) // Security Out belum menyetujui
-                ->orWhere('acc_security_in', 1); // Security In belum menyetujui
-        })->count();
-            
-        // Menghitung total request yang sudah disetujui semua pihak
-        $totalDisetujui = RequestDriver::where('acc_admin', 2) // Admin menyetujui
-            ->where('acc_head_unit', 2) // Head Unit menyetujui
-            ->where('acc_security_out', 2) // Security Out menyetujui
-            ->where('acc_security_in', 2) // Security In menyetujui
-            ->count();
-            
-        // Menghitung total request yang ditolak oleh salah satu pihak
-        $totalDitolak = RequestDriver::where(function($query) {
-            $query->where('acc_admin', 3) // Admin menolak
-                ->orWhere('acc_head_unit', 3) // Head Unit menolak
-                ->orWhere('acc_security_out', 3) // Security Out menolak
-                ->orWhere('acc_security_in', 3); // Security In menolak
-        })->count();
-            
-        // Total semua request
-        $totalRequest = RequestDriver::count();
-        
+        // Pass data to the view
         return view('superadmin.request-driver.index', compact(
             'title', 
-            'requestDrivers',
+            'requestDrivers', // Tetap menggunakan $requestDrivers
             'totalMenunggu',
             'totalDisetujui',
             'totalDitolak',
