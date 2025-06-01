@@ -4,7 +4,11 @@
             <div class="sidebar-content">
                 <div class="user">
                     <div class="avatar-sm float-left mr-2">
-                        <img src="../assets/img/profile.jpg" alt="..." class="avatar-img rounded-circle">
+                        @if(Auth::user()->photo)
+                            <img src="{{ asset(Auth::user()->photo) }}" alt="image profile" class="avatar-img rounded-circle">
+                        @else
+                            <img src="{{ asset('images/users/default.png') }}" alt="image profile" class="avatar-img rounded-circle">
+                        @endif
                     </div>
                     <div class="info">
                         <a data-toggle="collapse" href="#collapseExample" aria-expanded="true">
@@ -18,13 +22,13 @@
                         <div class="collapse in" id="collapseExample">
                             <ul class="nav">
                                 <li>
-                                    <a href="#profile">
-                                        <span class="link-collapse">Aktifitas Saya</span>
+                                    <a href="{{ route('users.profile', ['id' => Auth::id()]) }}">
+                                        <span class="link-collapse">Lihat Profil</span>
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="#edit">
-                                        <span class="link-collapse">Pengaturan</span>
+                                    <a href="{{ route('logout') }}">
+                                        <span class="link-collapse">Keluar</span>
                                     </a>
                                 </li>
                             </ul>

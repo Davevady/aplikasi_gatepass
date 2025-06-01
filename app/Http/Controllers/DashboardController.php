@@ -178,4 +178,97 @@ class DashboardController extends Controller
 
         return $monthlyData;
     }
+
+    /**
+     * Mengambil data permohonan berdasarkan status
+     * 
+     * @param string $status Status permohonan (disetujui/ditolak)
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getStatusData($status)
+    {
+        $data = [];
+        
+        if ($status === 'disetujui') {
+            // Data karyawan yang disetujui
+            $karyawanDisetujui = RequestKaryawan::with('departemen')
+                ->where('acc_lead', 2)
+                ->where('acc_hr_ga', 2)
+                ->where('acc_security_out', 2)
+                ->where('acc_security_in', 2)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'nama' => $item->nama,
+                        'departemen' => $item->departemen->name,
+                        'tanggal' => $item->created_at->format('d M Y'),
+                        'jam_out' => $item->jam_out,
+                        'jam_in' => $item->jam_in,
+                        'tipe' => 'Karyawan'
+                    ];
+                });
+
+            // Data driver yang disetujui
+            $driverDisetujui = RequestDriver::where('acc_admin', 2)
+                ->where('acc_head_unit', 2)
+                ->where('acc_security_out', 2)
+                ->where('acc_security_in', 2)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'nama' => $item->nama_driver,
+                        'departemen' => '-',
+                        'tanggal' => $item->created_at->format('d M Y'),
+                        'jam_out' => $item->jam_out,
+                        'jam_in' => $item->jam_in,
+                        'tipe' => 'Driver'
+                    ];
+                });
+
+            $data = $karyawanDisetujui->concat($driverDisetujui);
+        } else if ($status === 'ditolak') {
+            // Data karyawan yang ditolak
+            $karyawanDitolak = RequestKaryawan::with('departemen')
+                ->where(function($query) {
+                    $query->where('acc_lead', 3)
+                        ->orWhere('acc_hr_ga', 3)
+                        ->orWhere('acc_security_out', 3)
+                        ->orWhere('acc_security_in', 3);
+                })
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'nama' => $item->nama,
+                        'departemen' => $item->departemen->name,
+                        'tanggal' => $item->created_at->format('d M Y'),
+                        'jam_out' => $item->jam_out,
+                        'jam_in' => $item->jam_in,
+                        'tipe' => 'Karyawan'
+                    ];
+                });
+
+            // Data driver yang ditolak
+            $driverDitolak = RequestDriver::where(function($query) {
+                    $query->where('acc_admin', 3)
+                        ->orWhere('acc_head_unit', 3)
+                        ->orWhere('acc_security_out', 3)
+                        ->orWhere('acc_security_in', 3);
+                })
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'nama' => $item->nama_driver,
+                        'departemen' => '-',
+                        'tanggal' => $item->created_at->format('d M Y'),
+                        'jam_out' => $item->jam_out,
+                        'jam_in' => $item->jam_in,
+                        'tipe' => 'Driver'
+                    ];
+                });
+
+            $data = $karyawanDitolak->concat($driverDitolak);
+        }
+
+        return response()->json($data);
+    }
 }

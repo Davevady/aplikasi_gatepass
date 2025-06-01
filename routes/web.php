@@ -33,6 +33,7 @@ Route::get('/logout', [UserController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/status/{status}', [DashboardController::class, 'getStatusData'])->name('dashboard.status');
     
     // request karyawan - hanya bisa diakses admin, security, lead, hr-ga
     Route::middleware(['role:admin,security,lead,hr-ga'])->group(function () {
@@ -45,8 +46,9 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('request-driver', RequestDriverController::class)->except(['create']);
         Route::post('/request-driver/{id}/acc/{role_id}', [RequestDriverController::class, 'accRequest'])->name('request-driver.acc');
     });
-
-    // notification - bisa diakses semua user yang sudah login
+    
+    // bisa diakses semua user yang sudah login
+    Route::get('/users/{id}/profile', [UserController::class, 'profile'])->name('users.profile');
     Route::resource('notifications', NotificationController::class);
     Route::get('/notification/{id}/show', [NotificationController::class, 'showAndRead'])->name('notification.showAndRead');
 
@@ -59,7 +61,6 @@ Route::middleware(['auth'])->group(function () {
         
         // Users management
         Route::resource('users', UserController::class)->except(['update', 'destroy']);
-        Route::get('/users/{id}/profile', [UserController::class, 'profile'])->name('users.profile');
         Route::put('/users/update-basic-info/{id}', [UserController::class, 'updateBasicInfo'])->name('users.update-basic-info');
         Route::put('/users/update-email/{id}', [UserController::class, 'updateEmail'])->name('users.update-email');
         Route::put('/users/reset-password/{id}', [UserController::class, 'resetPassword'])->name('users.reset-password');

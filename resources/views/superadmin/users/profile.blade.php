@@ -22,7 +22,7 @@
                                 <h5 class="text-white op-7 mb-2">Detail Informasi Pengguna</h5>
                             </div>
                             <div class="ml-md-auto py-2 py-md-0">
-                                <a href="{{ route('users.index') }}" class="btn btn-light btn-border btn-round">
+                                <a href="{{ url()->previous() }}" class="btn btn-light btn-border btn-round">
                                     <i class="fas fa-arrow-left"></i> Kembali
                                 </a>
                             </div>

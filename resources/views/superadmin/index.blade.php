@@ -259,13 +259,47 @@
                                 </div>
                             </div>
                         </div>
-					</div>
-				</div>
-			</div>
-		@include('layout.superadmin.script')
-		</div>
-	</div>
-	<script>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Status -->
+    <div class="modal fade" id="statusModal" tabindex="-1" role="dialog" aria-labelledby="statusModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="statusModalLabel">Detail Status</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="statusTable">
+                            <thead>
+                                <tr>
+                                    <th>No.</th>
+                                    <th>Nama</th>
+                                    <th>Departemen</th>
+                                    <th>Tanggal</th>
+                                    <th>Jam Keluar</th>
+                                    <th>Jam Kembali</th>
+                                    <th>Tipe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @include('layout.superadmin.script')
+    <script>
         $(document).ready(function() {
             // Auto hide alerts after 5 seconds
             setTimeout(function() {
@@ -276,6 +310,40 @@
 
             // Add animation when alert appears
             $('.floating-alert').hide().fadeIn('slow');
+
+            // Fungsi untuk menampilkan modal status
+            function showStatusModal(status) {
+                $('#statusModalLabel').text(status === 'disetujui' ? 'Data Permohonan Disetujui' : 'Data Permohonan Ditolak');
+                $('#statusTable tbody').empty();
+                
+                $.get(`/dashboard/status/${status}`, function(data) {
+                    data.forEach((item, index) => {
+                        $('#statusTable tbody').append(`
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${item.nama}</td>
+                                <td>${item.departemen}</td>
+                                <td>${item.tanggal}</td>
+                                <td>${item.jam_out}</td>
+                                <td>${item.jam_in}</td>
+                                <td>${item.tipe}</td>
+                            </tr>
+                        `);
+                    });
+                });
+                
+                $('#statusModal').modal('show');
+            }
+
+            // Event click untuk card disetujui
+            $('.card-stats:has(.fa-check-circle)').click(function() {
+                showStatusModal('disetujui');
+            });
+
+            // Event click untuk card ditolak
+            $('.card-stats:has(.fa-times-circle)').click(function() {
+                showStatusModal('ditolak');
+            });
         });
 
         // Grafik Permohonan Bulanan

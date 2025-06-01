@@ -100,7 +100,11 @@
                 <li class="nav-item dropdown hidden-caret">
                     <a class="dropdown-toggle profile-pic" data-toggle="dropdown" href="#" aria-expanded="false">
                         <div class="avatar-sm">
-                            <img src="../assets/img/profile.jpg" alt="..." class="avatar-img rounded-circle">
+                            @if(Auth::user()->photo)
+                                <img src="{{ asset(Auth::user()->photo) }}" alt="..." class="avatar-img rounded-circle">
+                            @else
+                                <img src="{{ asset('images/users/default.png') }}" alt="..." class="avatar-img rounded-circle">
+                            @endif
                         </div>
                     </a>
                     <ul class="dropdown-menu dropdown-user animated fadeIn">
@@ -122,12 +126,6 @@
                                 </div>
                             </li>
                             <li>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="/profile">Profil Saya</a>
-                                <a class="dropdown-item" href="/surat-izin">Surat Izin Saya</a>
-                                <a class="dropdown-item" href="/pesan">Pesan Masuk</a>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="/pengaturan">Pengaturan Akun</a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="{{ route('logout') }}">Keluar</a>
                             </li>
