@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\RequestKaryawan;
+use App\Models\Notification;
 
 class RequestKaryawanSeeder extends Seeder
 {
@@ -22,7 +23,7 @@ class RequestKaryawanSeeder extends Seeder
                       'Training eksternal', 'Seminar industri', 'Kunjungan ke pameran', 'Koordinasi tim'];
         $jamOuts = ['13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
         $jamIns = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
-        $accStatuses = [1, 2]; // 1 = menunggu, 2 = disetujui
+        $accStatuses = [1, 2, 3]; // 1 = menunggu, 2 = disetujui, 3 = ditolak
 
         foreach ($departemens as $departemen) {
             // Buat 3 data random untuk setiap departemen
@@ -50,61 +51,188 @@ class RequestKaryawanSeeder extends Seeder
                     'acc_security_out' => $accSecurityOut,
                 ]);
 
-                // Buat notifikasi berdasarkan status approval
-                if ($accLead == 2) {
-                    \App\Models\Notification::create([
-                        'user_id' => 1, // Super Admin
-                        'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui Lead',
+                // Notifikasi awal untuk Lead
+                $users = \App\Models\User::whereHas('role', function($query) {
+                    $query->whereIn('slug', ['lead', 'admin']);
+                })->get();
+
+                foreach($users as $user) {
+                    Notification::create([
+                        'user_id' => $user->id,
+                        'title' => 'Permohonan Izin Keluar ' . $nama,
                         'message' => 'Permohonan izin keluar atas nama ' . $nama . 
                                    ' dari departemen ' . $departemen->name . 
                                    ' untuk keperluan ' . $keperluan . 
-                                   ' telah disetujui oleh Lead dan menunggu persetujuan HR GA',
+                                   ' sedang menunggu persetujuan',
                         'type' => 'karyawan',
                         'status' => 'pending',
                         'is_read' => false
                     ]);
+                }
+
+                // Notifikasi berdasarkan status approval
+                if ($accLead == 2) {
+                    // Notifikasi untuk HR GA
+                    $users = \App\Models\User::whereHas('role', function($query) {
+                        $query->whereIn('slug', ['hr-ga', 'admin']);
+                    })->get();
+
+                    foreach($users as $user) {
+                        Notification::create([
+                            'user_id' => $user->id,
+                            'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui Lead',
+                            'message' => 'Permohonan izin keluar atas nama ' . $nama . 
+                                       ' dari departemen ' . $departemen->name . 
+                                       ' untuk keperluan ' . $keperluan . 
+                                       ' telah disetujui oleh Lead dan menunggu persetujuan HR GA',
+                            'type' => 'karyawan',
+                            'status' => 'pending',
+                            'is_read' => false
+                        ]);
+                    }
+                } elseif ($accLead == 3) {
+                    // Notifikasi penolakan Lead
+                    $users = \App\Models\User::whereHas('role', function($query) {
+                        $query->whereIn('slug', ['admin']);
+                    })->get();
+
+                    foreach($users as $user) {
+                        Notification::create([
+                            'user_id' => $user->id,
+                            'title' => 'Permohonan Izin Keluar ' . $nama . ' Ditolak Lead',
+                            'message' => 'Permohonan izin keluar atas nama ' . $nama . 
+                                       ' dari departemen ' . $departemen->name . 
+                                       ' untuk keperluan ' . $keperluan . 
+                                       ' telah ditolak oleh Lead',
+                            'type' => 'karyawan',
+                            'status' => 'pending',
+                            'is_read' => false
+                        ]);
+                    }
                 }
 
                 if ($accLead == 2 && $accHrGa == 2) {
-                    \App\Models\Notification::create([
-                        'user_id' => 1, // Super Admin
-                        'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui HR GA',
-                        'message' => 'Permohonan izin keluar atas nama ' . $nama . 
-                                   ' dari departemen ' . $departemen->name . 
-                                   ' untuk keperluan ' . $keperluan . 
-                                   ' telah disetujui oleh HR GA dan menunggu persetujuan Security Out',
-                        'type' => 'karyawan',
-                        'status' => 'pending',
-                        'is_read' => false
-                    ]);
+                    // Notifikasi untuk Security
+                    $users = \App\Models\User::whereHas('role', function($query) {
+                        $query->whereIn('slug', ['security', 'admin']);
+                    })->get();
+
+                    foreach($users as $user) {
+                        Notification::create([
+                            'user_id' => $user->id,
+                            'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui HR GA',
+                            'message' => 'Permohonan izin keluar atas nama ' . $nama . 
+                                       ' dari departemen ' . $departemen->name . 
+                                       ' untuk keperluan ' . $keperluan . 
+                                       ' telah disetujui oleh HR GA dan menunggu persetujuan Security Out',
+                            'type' => 'karyawan',
+                            'status' => 'pending',
+                            'is_read' => false
+                        ]);
+                    }
+                } elseif ($accLead == 2 && $accHrGa == 3) {
+                    // Notifikasi penolakan HR GA
+                    $users = \App\Models\User::whereHas('role', function($query) {
+                        $query->whereIn('slug', ['admin']);
+                    })->get();
+
+                    foreach($users as $user) {
+                        Notification::create([
+                            'user_id' => $user->id,
+                            'title' => 'Permohonan Izin Keluar ' . $nama . ' Ditolak HR GA',
+                            'message' => 'Permohonan izin keluar atas nama ' . $nama . 
+                                       ' dari departemen ' . $departemen->name . 
+                                       ' untuk keperluan ' . $keperluan . 
+                                       ' telah ditolak oleh HR GA',
+                            'type' => 'karyawan',
+                            'status' => 'pending',
+                            'is_read' => false
+                        ]);
+                    }
                 }
 
                 if ($accLead == 2 && $accHrGa == 2 && $accSecurityOut == 2) {
-                    \App\Models\Notification::create([
-                        'user_id' => 1, // Super Admin
-                        'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui Security Out',
-                        'message' => 'Permohonan izin keluar atas nama ' . $nama . 
-                                   ' dari departemen ' . $departemen->name . 
-                                   ' untuk keperluan ' . $keperluan . 
-                                   ' telah disetujui oleh Security Out dan menunggu karyawan kembali',
-                        'type' => 'karyawan',
-                        'status' => 'pending',
-                        'is_read' => false
-                    ]);
-                }
+                    // Notifikasi untuk Admin
+                    $users = \App\Models\User::whereHas('role', function($query) {
+                        $query->where('slug', 'admin');
+                    })->get();
 
-                if ($accLead == 2 && $accHrGa == 2 && $accSecurityOut == 2 && $accSecurityIn == 2) {
-                    \App\Models\Notification::create([
-                        'user_id' => 1, // Super Admin
-                        'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui Security In',
-                        'message' => 'Permohonan izin keluar atas nama ' . $nama . 
-                                   ' dari departemen ' . $departemen->name . 
-                                   ' untuk keperluan ' . $keperluan . 
-                                   ' telah disetujui oleh Security In dan permohonan selesai',
-                        'type' => 'karyawan',
-                        'status' => 'pending',
-                        'is_read' => false
-                    ]);
+                    foreach($users as $user) {
+                        Notification::create([
+                            'user_id' => $user->id,
+                            'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui Security Out',
+                            'message' => 'Permohonan izin keluar atas nama ' . $nama . 
+                                       ' dari departemen ' . $departemen->name . 
+                                       ' untuk keperluan ' . $keperluan . 
+                                       ' telah disetujui oleh Security Out dan menunggu karyawan kembali',
+                            'type' => 'karyawan',
+                            'status' => 'pending',
+                            'is_read' => false
+                        ]);
+                    }
+                } elseif ($accLead == 2 && $accHrGa == 2 && $accSecurityOut == 3) {
+                    if ($accHrGa == 2) {
+                        // Notifikasi untuk Security
+                        $users = \App\Models\User::whereHas('role', function($query) {
+                            $query->whereIn('slug', ['security', 'admin']);
+                        })->get();
+
+                        foreach($users as $user) {
+                            Notification::create([
+                                'user_id' => $user->id,
+                                'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui HR GA',
+                                'message' => 'Permohonan izin keluar atas nama ' . $nama . 
+                                           ' dari departemen ' . $departemen->name . 
+                                           ' untuk keperluan ' . $keperluan . 
+                                           ' telah disetujui oleh HR GA dan menunggu persetujuan Security Out',
+                                'type' => 'karyawan',
+                                'status' => 'pending',
+                                'is_read' => false
+                            ]);
+                        }
+
+                        if ($accSecurityOut == 2) {
+                            // Notifikasi untuk Admin
+                            $users = \App\Models\User::whereHas('role', function($query) {
+                                $query->where('slug', 'admin');
+                            })->get();
+
+                            foreach($users as $user) {
+                                Notification::create([
+                                    'user_id' => $user->id,
+                                    'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui Security Out',
+                                    'message' => 'Permohonan izin keluar atas nama ' . $nama . 
+                                               ' dari departemen ' . $departemen->name . 
+                                               ' untuk keperluan ' . $keperluan . 
+                                               ' telah disetujui oleh Security Out dan menunggu karyawan kembali',
+                                    'type' => 'karyawan',
+                                    'status' => 'pending',
+                                    'is_read' => false
+                                ]);
+                            }
+
+                            if ($accSecurityIn == 2) {
+                                // Notifikasi untuk Admin
+                                $users = \App\Models\User::whereHas('role', function($query) {
+                                    $query->where('slug', 'admin');
+                                })->get();
+
+                                foreach($users as $user) {
+                                    Notification::create([
+                                        'user_id' => $user->id,
+                                        'title' => 'Permohonan Izin Keluar ' . $nama . ' Disetujui Security In',
+                                        'message' => 'Permohonan izin keluar atas nama ' . $nama . 
+                                                   ' dari departemen ' . $departemen->name . 
+                                                   ' untuk keperluan ' . $keperluan . 
+                                                   ' telah disetujui oleh Security In dan permohonan selesai',
+                                        'type' => 'karyawan',
+                                        'status' => 'pending',
+                                        'is_read' => false
+                                    ]);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

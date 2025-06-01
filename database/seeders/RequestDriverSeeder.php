@@ -123,12 +123,13 @@ class RequestDriverSeeder extends Seeder
                             foreach($users as $user) {
                                 Notification::create([
                                     'user_id' => $user->id,
-                                    'title' => 'Disetujui Security In',
-                                    'message' => 'Permohonan izin driver ' . $namaEkspedisi . 
+                                    'title' => 'Permohonan Izin Driver ' . $namaEkspedisi . ' Disetujui Security In',
+                                    'message' => 'Permohonan izin driver atas nama ' . $namaEkspedisi . 
                                                ' dengan nopol ' . $nopol . 
+                                               ' untuk keperluan ' . $keperluan . 
                                                ' telah disetujui oleh Security In dan permohonan selesai',
                                     'type' => 'driver',
-                                    'status' => 'pending',
+                                    'status' => 'approved',
                                     'is_read' => false
                                 ]);
                             }
