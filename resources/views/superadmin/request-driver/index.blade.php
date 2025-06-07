@@ -150,7 +150,7 @@
                                                     @foreach($requestDrivers as $request)
                                                         <tr>
                                                             <td>{{ $counter++ }}</td>
-                                                            <td>{{ $request->nama_ekspedisi }}</td>
+                                                            <td>{{ $request->ekspedisi->nama_ekspedisi }}</td>
                                                             <td>{{ $request->nopol_kendaraan }}</td>
                                                             <td>{{ $request->nama_driver }}</td>
                                                             <td>{{ $request->no_hp_driver }}</td>
@@ -228,25 +228,42 @@
                                                                         data-acc-admin="{{ $request->acc_admin }}"
                                                                         data-acc-head-unit="{{ $request->acc_head_unit }}"
                                                                         data-acc-security-out="{{ $request->acc_security_out }}"
-                                                                        data-acc-security-in="{{ $request->acc_security_in }}">
+                                                                        data-acc-security-in="{{ $request->acc_security_in }}"
+                                                                        data-id="{{ $request->id }}"
+                                                                        data-user-role-id="{{ auth()->user()->role_id }}"
+                                                                        data-user-role-title="{{ auth()->user()->role->title }}">
                                                                     <i class="fas fa-eye"></i> Detail
                                                                 </button>
+                                                                <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editModal"
+                                                                        data-id="{{ $request->id }}"
+                                                                        data-ekspedisi-id="{{ $request->ekspedisi_id }}"
+                                                                        data-nama-ekpedisi="{{ $request->nama_ekspedisi }}"
+                                                                        data-nopol="{{ $request->nopol_kendaraan }}"
+                                                                        data-nama-driver="{{ $request->nama_driver }}"
+                                                                        data-no-hp-driver="{{ $request->no_hp_driver }}"
+                                                                        data-nama-kernet="{{ $request->nama_kernet }}"
+                                                                        data-no-hp-kernet="{{ $request->no_hp_kernet }}"
+                                                                        data-jam-keluar="{{ $request->jam_out }}"
+                                                                        data-jam-kembali="{{ $request->jam_in }}"
+                                                                        data-keperluan="{{ $request->keperluan }}">
+                                                                    <i class="fas fa-edit"></i> Edit
+                                                                </button>
                                                                 {{-- Tombol ACC untuk Role Admin --}}
-                                                                @if(auth()->user()->role_id == 4 && $request->acc_admin == 1)
+                                                                @if(auth()->user()->role_id == 1 || (auth()->user()->role_id == 4 && $request->acc_admin == 1))
                                                                 <button type="button" class="btn btn-sm btn-success acc-btn" 
                                                                         data-id="{{ $request->id }}"
                                                                         data-role-id="{{ auth()->user()->role_id }}">
                                                                     <i class="fas fa-check"></i> ACC
                                                                 </button>
                                                                 {{-- Tombol ACC untuk Role Head Unit --}}
-                                                                @elseif(auth()->user()->role_id == 5 && $request->acc_head_unit == 1 && $request->acc_admin == 2)
+                                                                @elseif(auth()->user()->role_id == 1 || (auth()->user()->role_id == 5 && $request->acc_head_unit == 1 && $request->acc_admin == 2))
                                                                 <button type="button" class="btn btn-sm btn-success acc-btn" 
                                                                         data-id="{{ $request->id }}"
                                                                         data-role-id="{{ auth()->user()->role_id }}">
                                                                     <i class="fas fa-check"></i> ACC
                                                                 </button>
                                                                 {{-- Tombol ACC untuk Role Security --}}
-                                                                @elseif(auth()->user()->role_id == 6 && $request->acc_admin == 2 && $request->acc_head_unit == 2)
+                                                                @elseif(auth()->user()->role_id == 1 || (auth()->user()->role_id == 6 && $request->acc_admin == 2 && $request->acc_head_unit == 2))
                                                                     @if($request->acc_security_out == 1)
                                                                     {{-- Tombol ACC Out --}}
                                                                     <button type="button" class="btn btn-sm btn-success acc-btn" 
@@ -321,41 +338,57 @@
                             <p id="modal-keperluan"></p>
                         </div>
                     </div>
+                    <input type="hidden" id="modal-request-id" name="request_id">
                     <hr>
                     <h5 class="mb-3">Status Persetujuan</h5>
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>Admin:</strong></p>
-                            <p><strong>Head Unit:</strong></p>
-                            <p><strong>Security (Keluar):</strong></p>
-                            <p><strong>Security (Masuk):</strong></p>
+                            <div class="form-group">
+                                <label class="font-weight-bold">Admin:</label>
+                                <div id="admin-actions" class="d-flex flex-wrap mb-2">
+                                    <span class="status-action btn btn-success btn-sm mr-2 mb-1" data-role="admin" data-status="2">Setujui</span>
+                                    <span class="status-action btn btn-danger btn-sm mr-2 mb-1" data-role="admin" data-status="3">Tolak</span>
+                                    <span class="status-action btn btn-warning btn-sm mb-1" data-role="admin" data-status="1">Menunggu</span>
+                                </div>
+                                <div id="modal-acc-admin" class="mt-2"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="font-weight-bold">Head Unit:</label>
+                                <div id="head-unit-actions" class="d-flex flex-wrap mb-2">
+                                    <span class="status-action btn btn-success btn-sm mr-2 mb-1" data-role="head-unit" data-status="2">Setujui</span>
+                                    <span class="status-action btn btn-danger btn-sm mr-2 mb-1" data-role="head-unit" data-status="3">Tolak</span>
+                                    <span class="status-action btn btn-warning btn-sm mb-1" data-role="head-unit" data-status="1">Menunggu</span>
+                                </div>
+                                <div id="modal-acc-head-unit" class="mt-2"></div>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <p id="modal-acc-admin">
-                                <span class="badge badge-warning" data-status="1">Menunggu</span>
-                                <span class="badge badge-success" data-status="2">Disetujui</span>
-                                <span class="badge badge-danger" data-status="3">Ditolak</span>
-                            </p>
-                            <p id="modal-acc-head-unit">
-                                <span class="badge badge-warning" data-status="1">Menunggu</span>
-                                <span class="badge badge-success" data-status="2">Disetujui</span>
-                                <span class="badge badge-danger" data-status="3">Ditolak</span>
-                            </p>
-                            <p id="modal-acc-security-out">
-                                <span class="badge badge-warning" data-status="1">Menunggu</span>
-                                <span class="badge badge-success" data-status="2">Disetujui</span>
-                                <span class="badge badge-danger" data-status="3">Ditolak</span>
-                            </p>
-                            <p id="modal-acc-security-in">
-                                <span class="badge badge-warning" data-status="1">Menunggu</span>
-                                <span class="badge badge-success" data-status="2">Disetujui</span>
-                                <span class="badge badge-danger" data-status="3">Ditolak</span>
-                            </p>
+                            <div class="form-group">
+                                <label class="font-weight-bold">Security (Keluar):</label>
+                                <div id="security-out-actions" class="d-flex flex-wrap mb-2">
+                                    <span class="status-action btn btn-success btn-sm mr-2 mb-1" data-role="security-out" data-status="2">Setujui</span>
+                                    <span class="status-action btn btn-danger btn-sm mr-2 mb-1" data-role="security-out" data-status="3">Tolak</span>
+                                    <span class="status-action btn btn-warning btn-sm mb-1" data-role="security-out" data-status="1">Menunggu</span>
+                                </div>
+                                <div id="modal-acc-security-out" class="mt-2"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="font-weight-bold">Security (Masuk):</label>
+                                <div id="security-in-actions" class="d-flex flex-wrap mb-2">
+                                    <span class="status-action btn btn-success btn-sm mr-2 mb-1" data-role="security-in" data-status="2">Setujui</span>
+                                    <span class="status-action btn btn-danger btn-sm mr-2 mb-1" data-role="security-in" data-status="3">Tolak</span>
+                                    <span class="status-action btn btn-warning btn-sm mb-1" data-role="security-in" data-status="1">Menunggu</span>
+                                </div>
+                                <div id="modal-acc-security-in" class="mt-2"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-primary" id="saveStatusBtn">Simpan Perubahan</button>
                 </div>
             </div>
         </div>
@@ -378,6 +411,76 @@
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="button" class="btn btn-success" id="confirmAccBtn">Ya, Setujui</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Edit -->
+    <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit Permohonan Izin Driver</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="editForm" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="edit_ekspedisi_id">Nama Ekspedisi</label>
+                                    <select class="form-control" id="edit_ekspedisi_id" name="ekspedisi_id" required>
+                                        @foreach($ekspedisis as $ekspedisi)
+                                            <option value="{{ $ekspedisi->id }}">{{ $ekspedisi->nama_ekspedisi }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit_nopol_kendaraan">Nomor Polisi</label>
+                                    <input type="text" class="form-control" id="edit_nopol_kendaraan" name="nopol_kendaraan" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit_nama_driver">Nama Driver</label>
+                                    <input type="text" class="form-control" id="edit_nama_driver" name="nama_driver" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit_no_hp_driver">No. HP Driver</label>
+                                    <input type="text" class="form-control" id="edit_no_hp_driver" name="no_hp_driver" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="edit_nama_kernet">Nama Kernet</label>
+                                    <input type="text" class="form-control" id="edit_nama_kernet" name="nama_kernet">
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit_no_hp_kernet">No. HP Kernet</label>
+                                    <input type="text" class="form-control" id="edit_no_hp_kernet" name="no_hp_kernet">
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit_jam_out">Jam Keluar</label>
+                                    <input type="time" class="form-control" id="edit_jam_out" name="jam_out" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit_jam_in">Jam Kembali</label>
+                                    <input type="time" class="form-control" id="edit_jam_in" name="jam_in" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_keperluan">Keperluan</label>
+                            <textarea class="form-control" id="edit_keperluan" name="keperluan" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -437,6 +540,15 @@
         #requestDriverTable td:last-child {
             min-width: 180px; /* Lebar lebih besar untuk kolom Aksi */
         }
+
+        .status-action.active {
+            filter: brightness(85%); /* Make active button slightly darker */
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Add a subtle shadow */
+        }
+
+        .hidden-by-js {
+            display: none !important;
+        }
     </style>
 
     <script>
@@ -483,81 +595,114 @@
             // Handle modal data
             $('#detailModal').on('show.bs.modal', function (event) {
                 var button = $(event.relatedTarget);
+                const requestId = button.data('id');
+                const userRoleId = button.data('user-role-id');
+                const userRoleTitle = button.data('user-role-title');
+                console.log('Detail Modal opened for Request ID (Driver): ', requestId);
+                console.log('User Role ID: ', userRoleId);
+                console.log('User Role Title: ', userRoleTitle);
+                
+                // Store request ID in hidden input
+                $('#modal-request-id').val(requestId);
+                
+                // Remove active class from all status actions
+                $('.status-action').removeClass('active');
+                
+                // Update modal content
                 $('#modal-nama-ekpedisi').text(button.data('nama-ekpedisi'));
                 $('#modal-nopol').text(button.data('nopol'));
                 $('#modal-nama-driver').text(button.data('nama-driver'));
                 $('#modal-no-hp-driver').text(button.data('no-hp-driver'));
-                
-                // Handle data kernet yang nullable
-                var namaKernet = button.data('nama-kernet');
-                var noHpKernet = button.data('no-hp-kernet');
-                
-                if (namaKernet && noHpKernet) {
-                    $('#modal-nama-kernet').text(namaKernet);
-                    $('#modal-no-hp-kernet').text(noHpKernet);
-                } else {
-                    $('#modal-nama-kernet').text('-');
-                    $('#modal-no-hp-kernet').text('-');
-                }
-                
+                $('#modal-nama-kernet').text(button.data('nama-kernet') || '-');
+                $('#modal-no-hp-kernet').text(button.data('no-hp-kernet') || '-');
                 $('#modal-tanggal').text(button.data('tanggal'));
                 $('#modal-jam-keluar').text(button.data('jam-keluar'));
                 $('#modal-jam-kembali').text(button.data('jam-kembali'));
                 $('#modal-keperluan').text(button.data('keperluan'));
                 
-                // Status Admin
-                var accAdmin = button.data('acc-admin');
-                var adminBadge = '';
-                if (accAdmin === 2) {
-                    adminBadge = '<span class="badge badge-success">Disetujui</span>';
-                } else if (accAdmin === 3) {
-                    adminBadge = '<span class="badge badge-danger">Ditolak</span>';
-                } else {
-                    adminBadge = '<span class="badge badge-warning">Menunggu</span>';
-                }
-                $('#modal-acc-admin').html(adminBadge);
+                // Update status badges and set initial active state for status actions
+                const accAdmin = button.data('acc-admin');
+                const accHeadUnit = button.data('acc-head-unit');
+                const accSecurityOut = button.data('acc-security-out');
+                const accSecurityIn = button.data('acc-security-in');
 
-                // Status Head Unit - hanya bisa diproses jika Admin menyetujui
-                var accHeadUnit = button.data('acc-head-unit');
-                var headUnitBadge = '';
-                if (accAdmin === 3) {
-                    headUnitBadge = '<span class="badge badge-secondary">Tidak Diproses</span>';
-                } else if (accHeadUnit === 2) {
-                    headUnitBadge = '<span class="badge badge-success">Disetujui</span>';
-                } else if (accHeadUnit === 3) {
-                    headUnitBadge = '<span class="badge badge-danger">Ditolak</span>';
-                } else {
-                    headUnitBadge = '<span class="badge badge-warning">Menunggu</span>';
-                }
-                $('#modal-acc-head-unit').html(headUnitBadge);
+                console.log('Initial Statuses (Driver):',
+                    'Admin:', accAdmin,
+                    'Head Unit:', accHeadUnit,
+                    'Security Out:', accSecurityOut,
+                    'Security In:', accSecurityIn
+                );
+                
+                updateStatusBadge('admin', accAdmin);
+                if (accAdmin === 2) $('.status-action[data-role="admin"][data-status="2"]').addClass('active');
+                else if (accAdmin === 3) $('.status-action[data-role="admin"][data-status="3"]').addClass('active');
+                else if (accAdmin === 1) $('.status-action[data-role="admin"][data-status="1"]').addClass('active');
+                
+                updateStatusBadge('head-unit', accHeadUnit);
+                if (accHeadUnit === 2) $('.status-action[data-role="head-unit"][data-status="2"]').addClass('active');
+                else if (accHeadUnit === 3) $('.status-action[data-role="head-unit"][data-status="3"]').addClass('active');
+                else if (accHeadUnit === 1) $('.status-action[data-role="head-unit"][data-status="1"]').addClass('active');
+                
+                updateStatusBadge('security-out', accSecurityOut);
+                if (accSecurityOut === 2) $('.status-action[data-role="security-out"][data-status="2"]').addClass('active');
+                else if (accSecurityOut === 3) $('.status-action[data-role="security-out"][data-status="3"]').addClass('active');
+                else if (accSecurityOut === 1) $('.status-action[data-role="security-out"][data-status="1"]').addClass('active');
+                
+                updateStatusBadge('security-in', accSecurityIn);
+                if (accSecurityIn === 2) $('.status-action[data-role="security-in"][data-status="2"]').addClass('active');
+                else if (accSecurityIn === 3) $('.status-action[data-role="security-in"][data-status="3"]').addClass('active');
+                else if (accSecurityIn === 1) $('.status-action[data-role="security-in"][data-status="1"]').addClass('active');
 
-                // Status Security Keluar - hanya bisa diproses jika Head Unit menyetujui
-                var accSecurityOut = button.data('acc-security-out');
-                var securityOutBadge = '';
-                if (accAdmin === 3 || accHeadUnit === 3) {
-                    securityOutBadge = '<span class="badge badge-secondary">Tidak Diproses</span>';
-                } else if (accSecurityOut === 2) {
-                    securityOutBadge = '<span class="badge badge-success">Sudah Keluar</span>';
-                } else if (accSecurityOut === 3) {
-                    securityOutBadge = '<span class="badge badge-danger">Ditolak</span>';
-                } else {
-                    securityOutBadge = '<span class="badge badge-warning">Belum Keluar</span>';
-                }
-                $('#modal-acc-security-out').html(securityOutBadge);
+                // Store initial statuses
+                let initialStatuses = {
+                    admin: accAdmin,
+                    'head-unit': accHeadUnit,
+                    'security-out': accSecurityOut,
+                    'security-in': accSecurityIn
+                };
+                $(this).data('initialStatuses', initialStatuses);
 
-                // Status Security Masuk - hanya bisa diproses jika Security Keluar menyetujui
-                var accSecurityIn = button.data('acc-security-in');
-                var securityInBadge = '';
-                if (accAdmin === 3 || accHeadUnit === 3 || accSecurityOut === 3) {
-                    securityInBadge = '<span class="badge badge-secondary">Tidak Diproses</span>';
-                } else if (accSecurityIn === 2) {
-                    securityInBadge = '<span class="badge badge-success">Sudah Masuk</span>';
-                } else if (accSecurityIn === 3) {
-                    securityInBadge = '<span class="badge badge-danger">Ditolak</span>';
-                } else {
-                    securityInBadge = '<span class="badge badge-warning">Belum Masuk</span>';
+                // Reset currentStatuses when modal is opened to avoid carrying over old state
+                $(this).data('currentStatuses', {});
+
+                // Hide all action button containers initially using the strong hidden-by-js class
+                $('#admin-actions').addClass('hidden-by-js');
+                $('#head-unit-actions').addClass('hidden-by-js');
+                $('#security-out-actions').addClass('hidden-by-js');
+                $('#security-in-actions').addClass('hidden-by-js');
+
+                // Now show based on user role and current approval flow status
+                if (userRoleId == 1) { // Admin (ID 1) can see all action buttons
+                    $('#admin-actions').removeClass('hidden-by-js');
+                    $('#head-unit-actions').removeClass('hidden-by-js');
+                    $('#security-out-actions').removeClass('hidden-by-js');
+                    $('#security-in-actions').removeClass('hidden-by-js');
+                } else if (userRoleId == 4) { // Checker (ID 4)
+                    // Checker can see their action buttons ONLY if Head Unit has NOT yet approved
+                    if (accHeadUnit !== 2) {
+                        $('#admin-actions').removeClass('hidden-by-js');
+                    }
+                } else if (userRoleId == 5) { // Head Unit (ID 5)
+                    // Head Unit can always see their action buttons if they are the current user
+                    $('#head-unit-actions').removeClass('hidden-by-js');
+                } else if (userRoleId == 6) { // Security (ID 6)
+                    // Security can always see their Security Out action buttons if they are the current user
+                    $('#security-out-actions').removeClass('hidden-by-js');
+                    // Security can see their Security In action buttons if Security Out has also approved
+                    if (accSecurityOut == 2) {
+                        $('#security-in-actions').removeClass('hidden-by-js');
+                    }
                 }
-                $('#modal-acc-security-in').html(securityInBadge);
+
+                // Debugging: Log visibility state of action buttons
+                console.log('Action Button Visibility (Driver):');
+                console.log('Admin Actions Visible:', $('#admin-actions').is(':visible'));
+                console.log('Head Unit Actions Visible:', $('#head-unit-actions').is(':visible'));
+                console.log('Security Out Actions Visible:', $('#security-out-actions').is(':visible'));
+                console.log('Security In Actions Visible:', $('#security-in-actions').is(':visible'));
+                
+                // Hide save button initially, it will be shown if a change is made
+                $('#saveStatusBtn').hide();
             });
 
             // Handle ACC button click
@@ -601,6 +746,148 @@
                             errorMessage = 'Terjadi kesalahan: ' + xhr.responseJSON.message;
                         } else if (xhr.responseText) {
                             errorMessage = 'Terjadi kesalahan: ' + xhr.responseText;
+                        }
+                        alert(errorMessage);
+                    }
+                });
+            });
+
+            // Handle status checkbox changes
+            $('.status-action').click(function() {
+                const role = $(this).data('role');
+                const status = $(this).data('status');
+                const requestId = $('#modal-request-id').val();
+                
+                // Remove active class from all actions in the same group
+                $(`.status-action[data-role="${role}"]`).removeClass('active');
+                
+                // Add active class to the clicked action
+                $(this).addClass('active');
+                
+                // Update the status badge
+                updateStatusBadge(role, status);
+
+                // Update the current statuses object in modal data
+                let currentStatuses = $(this).closest('.modal').data('currentStatuses') || {};
+                currentStatuses[role] = status;
+                $(this).closest('.modal').data('currentStatuses', currentStatuses);
+
+                // Check and toggle save button visibility
+                checkAndToggleSaveButton();
+            });
+
+            // Function to update status badge
+            function updateStatusBadge(role, status) {
+                let badge = '';
+                if (status === 2) {
+                    badge = '<span class="badge badge-success">Disetujui</span>';
+                } else if (status === 3) {
+                    badge = '<span class="badge badge-danger">Ditolak</span>';
+                } else {
+                    badge = '<span class="badge badge-warning">Menunggu</span>';
+                }
+                $(`#modal-acc-${role}`).html(badge);
+            }
+
+            // Function to check if save button should be visible
+            function checkAndToggleSaveButton() {
+                const initialStatuses = $(this).closest('.modal').data('initialStatuses');
+                const currentStatuses = $(this).closest('.modal').data('currentStatuses');
+                let changesMade = false;
+
+                for (const role in initialStatuses) {
+                    // Check if current status is different from initial status
+                    // And ensure currentStatuses has a value for this role
+                    if (currentStatuses && currentStatuses[role] !== undefined && initialStatuses[role] !== currentStatuses[role]) {
+                        changesMade = true;
+                        break;
+                    }
+                }
+                
+                if (changesMade) {
+                    $('#saveStatusBtn').show();
+                } else {
+                    $('#saveStatusBtn').hide();
+                }
+            }
+
+            // Handle save status button click
+            $('#saveStatusBtn').click(function() {
+                const requestId = $('#modal-request-id').val();
+                const statuses = $(this).closest('.modal').data('currentStatuses'); // Use currentStatuses
+                
+                // Ensure statuses object is not empty or undefined
+                if (!statuses || Object.keys(statuses).length === 0) {
+                    alert('Tidak ada perubahan status yang dipilih.');
+                    return;
+                }
+
+                // Send AJAX request to update statuses
+                $.ajax({
+                    url: `/request-driver/${requestId}/update-status`,
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        statuses: statuses
+                    },
+                    success: function(response) {
+                        if(response.success) {
+                            alert('Status berhasil diperbarui');
+                            location.reload();
+                        } else {
+                            alert('Terjadi kesalahan: ' + response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'Terjadi kesalahan.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = 'Terjadi kesalahan: ' + xhr.responseJSON.message;
+                        }
+                        alert(errorMessage);
+                    }
+                });
+            });
+
+            // Handle edit modal
+            $('#editModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                const requestId = button.data('id');
+                
+                // Set form action URL
+                $('#editForm').attr('action', `/request-driver/${requestId}`);
+                
+                // Populate form fields
+                $('#edit_ekspedisi_id').val(button.data('ekspedisi-id'));
+                $('#edit_nopol_kendaraan').val(button.data('nopol'));
+                $('#edit_nama_driver').val(button.data('nama-driver'));
+                $('#edit_no_hp_driver').val(button.data('no-hp-driver'));
+                $('#edit_nama_kernet').val(button.data('nama-kernet'));
+                $('#edit_no_hp_kernet').val(button.data('no-hp-kernet'));
+                $('#edit_jam_out').val(button.data('jam-keluar'));
+                $('#edit_jam_in').val(button.data('jam-kembali'));
+                $('#edit_keperluan').val(button.data('keperluan'));
+            });
+
+            // Handle form submission
+            $('#editForm').submit(function(e) {
+                e.preventDefault();
+                
+                $.ajax({
+                    url: $(this).attr('action'),
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        if(response.success) {
+                            alert('Data berhasil diperbarui');
+                            location.reload();
+                        } else {
+                            alert('Terjadi kesalahan: ' + response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'Terjadi kesalahan.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = 'Terjadi kesalahan: ' + xhr.responseJSON.message;
                         }
                         alert(errorMessage);
                     }

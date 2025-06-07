@@ -6,6 +6,17 @@
         input[type="time"]::-webkit-datetime-edit-ampm-field {
             display: none;
         }
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            background: none;
+        }
+        input[type="time"] {
+            -moz-appearance: textfield;
+        }
+        input[type="time"]::-webkit-inner-spin-button,
+        input[type="time"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
         .form-control {
             font-size: 14px;
             border-color: #ebedf2;
@@ -174,22 +185,72 @@
                                 </div>
                                 <div class="mb-3">
                                     <label for="jam_out" class="form-label">Jam Keluar <span class="text-danger">*</span></label>
-                                    <input type="time" class="form-control @error('jam_out') is-invalid @enderror" 
-                                           id="jam_out" name="jam_out" value="{{ old('jam_out') }}" required>
-                                    <small class="text-muted">Pilih jam berangkat/keluar dari area kerja.</small>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                                        <select class="form-select @error('jam_out') is-invalid @enderror" 
+                                                id="jam_out_hour" name="jam_out_hour" required>
+                                            <option value="">Jam</option>
+                                            @for($i = 0; $i < 24; $i++)
+                                                <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" 
+                                                    {{ old('jam_out_hour') == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>
+                                                    {{ str_pad($i, 2, '0', STR_PAD_LEFT) }}
+                                                </option>
+                                            @endfor
+                                        </select>
+                                        <span class="input-group-text">:</span>
+                                        <select class="form-select @error('jam_out') is-invalid @enderror" 
+                                                id="jam_out_minute" name="jam_out_minute" required>
+                                            <option value="">Menit</option>
+                                            @for($i = 0; $i < 60; $i += 5)
+                                                <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}"
+                                                    {{ old('jam_out_minute') == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>
+                                                    {{ str_pad($i, 2, '0', STR_PAD_LEFT) }}
+                                                </option>
+                                            @endfor
+                                        </select>
+                                        <span class="input-group-text">WIB</span>
+                                    </div>
+                                    <small class="text-muted">Pilih jam berangkat/keluar dari area kerja (format 24 jam).</small>
                                     @error('jam_out')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                                 <div class="mb-3">
                                     <label for="jam_in" class="form-label">Jam Kembali <span class="text-danger">*</span></label>
-                                    <input type="time" class="form-control @error('jam_in') is-invalid @enderror" 
-                                           id="jam_in" name="jam_in" value="{{ old('jam_in') }}" required>
-                                    <small class="text-muted">Pilih jam kembali ke area kerja (maksimal 1 jam dari jam keluar).</small>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-clock-history"></i></span>
+                                        <select class="form-select @error('jam_in') is-invalid @enderror" 
+                                                id="jam_in_hour" name="jam_in_hour" required>
+                                            <option value="">Jam</option>
+                                            @for($i = 0; $i < 24; $i++)
+                                                <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}"
+                                                    {{ old('jam_in_hour') == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>
+                                                    {{ str_pad($i, 2, '0', STR_PAD_LEFT) }}
+                                                </option>
+                                            @endfor
+                                        </select>
+                                        <span class="input-group-text">:</span>
+                                        <select class="form-select @error('jam_in') is-invalid @enderror" 
+                                                id="jam_in_minute" name="jam_in_minute" required>
+                                            <option value="">Menit</option>
+                                            @for($i = 0; $i < 60; $i += 5)
+                                                <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}"
+                                                    {{ old('jam_in_minute') == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>
+                                                    {{ str_pad($i, 2, '0', STR_PAD_LEFT) }}
+                                                </option>
+                                            @endfor
+                                        </select>
+                                        <span class="input-group-text">WIB</span>
+                                    </div>
+                                    <small class="text-muted">Pilih jam kembali ke area kerja (format 24 jam, maksimal 1 jam dari jam keluar).</small>
+                                    <div id="selisih_waktu" class="text-muted small mt-1"></div>
                                     @error('jam_in')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
+                                <!-- Hidden fields untuk menyimpan waktu lengkap -->
+                                <input type="hidden" name="jam_out" id="jam_out">
+                                <input type="hidden" name="jam_in" id="jam_in">
                                 <!-- Hidden approval fields -->
                                 <input type="hidden" name="acc_lead" value="0">
                                 <input type="hidden" name="acc_hr_ga" value="0">
@@ -217,16 +278,131 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const jamOut = document.getElementById('jam_out');
-            const jamIn = document.getElementById('jam_in');
-            const infoSelisih = document.createElement('div');
-            infoSelisih.className = 'text-muted small mt-1';
-            jamIn.parentNode.appendChild(infoSelisih);
+            const jamOutHour = document.getElementById('jam_out_hour');
+            const jamOutMinute = document.getElementById('jam_out_minute');
+            const jamInHour = document.getElementById('jam_in_hour');
+            const jamInMinute = document.getElementById('jam_in_minute');
+            const jamOutHidden = document.getElementById('jam_out');
+            const jamInHidden = document.getElementById('jam_in');
+            const selisihWaktu = document.getElementById('selisih_waktu');
 
-            // AJAX Form Submission
+            // Fungsi untuk menggabungkan jam dan menit
+            function gabungkanWaktu(hour, minute) {
+                return `${hour}:${minute}`;
+            }
+
+            // Fungsi untuk memperbarui nilai hidden input
+            function updateHiddenTime() {
+                if (jamOutHour.value && jamOutMinute.value) {
+                    jamOutHidden.value = gabungkanWaktu(jamOutHour.value, jamOutMinute.value);
+                }
+                if (jamInHour.value && jamInMinute.value) {
+                    jamInHidden.value = gabungkanWaktu(jamInHour.value, jamInMinute.value);
+                }
+            }
+
+            // Fungsi untuk menghitung selisih waktu dalam menit
+            function hitungSelisihMenit(waktu1, waktu2) {
+                const [jam1, menit1] = waktu1.split(':').map(Number);
+                const [jam2, menit2] = waktu2.split(':').map(Number);
+                return (jam2 * 60 + menit2) - (jam1 * 60 + menit1);
+            }
+
+            // Fungsi untuk memvalidasi jam masuk
+            function validasiJamMasuk() {
+                if (!jamOutHour.value || !jamOutMinute.value || !jamInHour.value || !jamInMinute.value) return;
+
+                const waktuKeluar = gabungkanWaktu(jamOutHour.value, jamOutMinute.value);
+                const waktuKembali = gabungkanWaktu(jamInHour.value, jamInMinute.value);
+                const selisih = hitungSelisihMenit(waktuKeluar, waktuKembali);
+                
+                if (selisih <= 0) {
+                    selisihWaktu.innerHTML = '<span class="text-danger">Jam kembali harus lebih besar dari jam keluar!</span>';
+                    jamInHour.value = '';
+                    jamInMinute.value = '';
+                    return false;
+                }
+                
+                if (selisih > 60) {
+                    selisihWaktu.innerHTML = '<span class="text-danger">Selisih waktu tidak boleh lebih dari 1 jam!</span>';
+                    jamInHour.value = '';
+                    jamInMinute.value = '';
+                    return false;
+                }
+
+                selisihWaktu.innerHTML = `<span class="text-success">Durasi izin: ${selisih} menit</span>`;
+                return true;
+            }
+
+            // Fungsi untuk membatasi pilihan jam masuk
+            function batasiJamMasuk() {
+                if (!jamOutHour.value || !jamOutMinute.value) return;
+
+                const outHour = parseInt(jamOutHour.value);
+                const outMinute = parseInt(jamOutMinute.value);
+                const maxHour = outHour + 1;
+
+                // Reset jam masuk
+                jamInHour.value = '';
+                jamInMinute.value = '';
+
+                // Nonaktifkan opsi jam yang tidak valid
+                Array.from(jamInHour.options).forEach(option => {
+                    if (option.value) {
+                        const hour = parseInt(option.value);
+                        option.disabled = hour < outHour || hour > maxHour;
+                    }
+                });
+
+                // Jika jam sama, nonaktifkan menit yang lebih kecil
+                if (jamInHour.value === jamOutHour.value) {
+                    Array.from(jamInMinute.options).forEach(option => {
+                        if (option.value) {
+                            option.disabled = parseInt(option.value) <= outMinute;
+                        }
+                    });
+                }
+            }
+
+            // Event listeners
+            [jamOutHour, jamOutMinute].forEach(input => {
+                input.addEventListener('change', function() {
+                    updateHiddenTime();
+                    batasiJamMasuk();
+                    if (jamInHour.value && jamInMinute.value) {
+                        validasiJamMasuk();
+                    }
+                });
+            });
+
+            [jamInHour, jamInMinute].forEach(input => {
+                input.addEventListener('change', function() {
+                    updateHiddenTime();
+                    validasiJamMasuk();
+                });
+            });
+
+            // Modifikasi AJAX form submission
             const karyawanForm = document.getElementById('karyawanForm');
             karyawanForm.addEventListener('submit', function(e) {
                 e.preventDefault();
+
+                // Validasi jam sebelum submit
+                if (!validasiJamMasuk()) {
+                    $('.floating-alert').html(`
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-exclamation-circle-fill me-3"></i>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">Peringatan!</h6>
+                                    <div class="small">Silakan periksa kembali waktu izin Anda!</div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    `);
+                    return;
+                }
 
                 const formData = new FormData(this);
 
@@ -295,65 +471,6 @@
                     }
                 });
             });
-
-            function cekSelisihJam() {
-                if (jamOut.value && jamIn.value) {
-                    // Konversi ke menit
-                    const [outJam, outMenit] = jamOut.value.split(':').map(Number);
-                    const [inJam, inMenit] = jamIn.value.split(':').map(Number);
-
-                    const totalOut = outJam * 60 + outMenit;
-                    const totalIn = inJam * 60 + inMenit;
-
-                    if (totalIn - totalOut > 60) {
-                        // Tampilkan alert error
-                        $('.floating-alert').html(`
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                <div class="d-flex align-items-start">
-                                    <i class="bi bi-exclamation-circle-fill me-3"></i>
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1">Peringatan!</h6>
-                                        <div class="small">Jam kembali tidak boleh lebih dari 1 jam dari jam keluar!</div>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        `);
-                        jamIn.value = '';
-                        infoSelisih.textContent = '';
-                    } else {
-                        const selisih = totalIn - totalOut;
-                        infoSelisih.textContent = `${selisih} menit`;
-                    }
-                } else {
-                    infoSelisih.textContent = '';
-                }
-            }
-
-            function batasiJamIn() {
-                if (jamOut.value) {
-                    const [outJam, outMenit] = jamOut.value.split(':').map(Number);
-                    const maxJam = outJam + 1;
-                    const maxMenit = outMenit;
-
-                    // Set max attribute untuk jam_in
-                    jamIn.max = `${maxJam.toString().padStart(2, '0')}:${maxMenit.toString().padStart(2, '0')}`;
-                    jamIn.min = jamOut.value;
-
-                    // Jika jam_in sudah diisi dan melebihi batas, kosongkan
-                    if (jamIn.value && jamIn.value > jamIn.max) {
-                        jamIn.value = '';
-                        infoSelisih.textContent = '';
-                    }
-                }
-            }
-
-            jamOut.addEventListener('change', function() {
-                batasiJamIn();
-                cekSelisihJam();
-            });
-
-            jamIn.addEventListener('change', cekSelisihJam);
         });
     </script>
 </body>

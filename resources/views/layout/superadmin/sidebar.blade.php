@@ -35,13 +35,13 @@
                         </div>
                     </div>
                 </div>
-                <ul class="nav nav-primary">
+                <!-- <ul class="nav nav-primary">
                     <li class="nav-item" id="search-nav">
                         <div class="input-group stylish-input-group">
                             <input type="text" placeholder="Cari..." class="form-control" id="searchInputSidebar">
                         </div>
                     </li>
-                </ul>
+                </ul> -->
                 <ul class="nav nav-primary" id="sidebarMenu">
                     <li class="nav-item {{ request()->is('dashboard') ? 'active' : '' }}" data-name="Beranda">
                         <a href="/dashboard">

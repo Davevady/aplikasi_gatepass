@@ -24,7 +24,9 @@ Route::get('/', function() {
     return redirect()->route('request-karyawan.create');
 });
 Route::get('/request-karyawan/create', [RequestKaryawanController::class, 'create'])->name('request-karyawan.create');
+Route::post('/request-karyawan/store', [RequestKaryawanController::class, 'store'])->name('request-karyawan.store');
 Route::get('/request-driver/create', [RequestDriverController::class, 'create'])->name('request-driver.create');
+Route::post('/request-driver/store', [RequestDriverController::class, 'store'])->name('request-driver.store');
 Route::get('/login', [UserController::class, 'login'])->name('login');
 Route::post('/login', [UserController::class, 'authLogin'])->name('auth.login');
 Route::get('/register', [UserController::class, 'register'])->name('register');
@@ -39,14 +41,18 @@ Route::middleware(['auth'])->group(function () {
     
     // request karyawan - hanya bisa diakses admin, security, lead, hr-ga
     Route::middleware(['role:admin,security,lead,hr-ga'])->group(function () {
-        Route::resource('request-karyawan', RequestKaryawanController::class)->except(['create']);
+        Route::resource('request-karyawan', RequestKaryawanController::class)->only(['index', 'show']);
+        Route::put('/request-karyawan/{id}', [RequestKaryawanController::class, 'update'])->name('request-karyawan.update');
         Route::post('/request-karyawan/{id}/acc/{role_id}', [RequestKaryawanController::class, 'accRequest'])->name('request-karyawan.acc');
+        Route::post('/request-karyawan/{id}/update-status', [RequestKaryawanController::class, 'updateStatus'])->name('request-karyawan.update-status');
     });
 
     // request driver - hanya bisa diakses admin, security, checker, head-unit  
     Route::middleware(['role:admin,security,checker,head-unit'])->group(function () {
-        Route::resource('request-driver', RequestDriverController::class)->except(['create']);
+        Route::resource('request-driver', RequestDriverController::class)->only(['index', 'show']);
+        Route::put('/request-driver/{id}', [RequestDriverController::class, 'update'])->name('request-driver.update');
         Route::post('/request-driver/{id}/acc/{role_id}', [RequestDriverController::class, 'accRequest'])->name('request-driver.acc');
+        Route::post('/request-driver/{id}/update-status', [RequestDriverController::class, 'updateStatus'])->name('request-driver.update-status');
     });
     
     // bisa diakses semua user yang sudah login
