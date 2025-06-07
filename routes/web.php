@@ -7,6 +7,7 @@ use App\Http\Controllers\RequestDriverController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DepartemenController;
+use App\Http\Controllers\EkspedisiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -77,4 +78,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/users/{id}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
         Route::post('/users/{id}/reset-password-default', [UserController::class, 'resetPasswordToDefault'])->name('users.reset-password-default');
     });
+
+    // Route untuk Ekspedisi
+    Route::get('/ekspedisi', [EkspedisiController::class, 'index'])->name('ekspedisi.index');
+    Route::post('/ekspedisi/store', [EkspedisiController::class, 'store'])->name('ekspedisi.store');
+    Route::put('/ekspedisi/update/{id}', [EkspedisiController::class, 'update'])->name('ekspedisi.update');
+    Route::delete('/ekspedisi/delete/{id}', [EkspedisiController::class, 'destroy'])->name('ekspedisi.destroy');
 });

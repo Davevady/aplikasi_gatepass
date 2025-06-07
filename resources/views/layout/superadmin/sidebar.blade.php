@@ -83,13 +83,13 @@
                     </li>
                     @endif
                     @if(Auth::user()->role->slug === 'admin')
-                    <li class="nav-item {{ request()->is('users*') || request()->is('role*') || request()->is('departemen*') ? 'active' : '' }}">
+                    <li class="nav-item {{ request()->is('users*') || request()->is('role*') || request()->is('departemen*') || request()->is('ekspedisi*') ? 'active' : '' }}">
                         <a data-toggle="collapse" href="#submenuMaster">
                             <i class="fas fa-cog"></i>
                             <p>Master Data</p>
                             <span class="caret"></span>
                         </a>
-                        <div class="collapse {{ request()->is('users*') || request()->is('role*') || request()->is('departemen*') ? 'show' : '' }}" id="submenuMaster">
+                        <div class="collapse {{ request()->is('users*') || request()->is('role*') || request()->is('departemen*') || request()->is('ekspedisi*') ? 'show' : '' }}" id="submenuMaster">
                             <ul class="nav nav-collapse">
                                 <li data-name="Hak Akses" class="{{ request()->is('role*') ? 'active' : '' }}">
                                     <a href="/role"> 
@@ -99,6 +99,11 @@
                                 <li data-name="Data Departemen" class="{{ request()->is('departemen*') ? 'active' : '' }}">
                                     <a href="/departemen"> 
                                         <span class="sub-item">Data Departemen</span>
+                                    </a>
+                                </li>
+                                <li data-name="Data Ekspedisi" class="{{ request()->is('ekspedisi*') ? 'active' : '' }}">
+                                    <a href="/ekspedisi"> 
+                                        <span class="sub-item">Data Ekspedisi</span>
                                     </a>
                                 </li>
                                 <li data-name="Data Pengguna" class="{{ request()->is('users*') ? 'active' : '' }}">
