@@ -5,14 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class RequestDriver extends Model
+class Ekspedisi extends Model
 {
     use HasFactory;
 
     protected $guarded = ['id'];
 
-    public function ekspedisi()
+    // Relasi dengan RequestDriver
+    public function requestDrivers()
     {
-        return $this->belongsTo(Ekspedisi::class);
+        return $this->hasMany(RequestDriver::class);
     }
 }

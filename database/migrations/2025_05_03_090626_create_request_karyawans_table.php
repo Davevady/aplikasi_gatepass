@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('request_karyawans', function (Blueprint $table) {
             $table->id();
+            $table->string('no_surat')->unique();
             $table->string('nama');
             $table->foreignId('departemen_id')->constrained('departemens')->onDelete('cascade');
             $table->string('keperluan');

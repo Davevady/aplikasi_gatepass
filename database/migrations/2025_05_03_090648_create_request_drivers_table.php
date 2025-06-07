@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('request_drivers', function (Blueprint $table) {
             $table->id();
-            $table->string('nama_ekspedisi');
+            $table->string('no_surat')->unique();
+            $table->foreignId('ekspedisi_id')->constrained('ekspedisis')->onDelete('cascade');
             $table->string('nopol_kendaraan');
             $table->string('nama_driver');
             $table->string('no_hp_driver');

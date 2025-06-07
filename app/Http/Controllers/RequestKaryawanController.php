@@ -20,6 +20,7 @@ class RequestKaryawanController extends Controller
         $title = 'Permohonan Izin Keluar Karyawan';
         $user = auth()->user();
         $requestKaryawans = collect(); // Inisialisasi collection kosong
+        $departemens = Departemen::all(); // Ambil semua data departemen
 
         // Ambil data permohonan karyawan berdasarkan role
         if ($user->role_id != 4 && $user->role_id != 5) { // Bukan role checker dan head unit
@@ -68,11 +69,12 @@ class RequestKaryawanController extends Controller
         // Pass data to the view
         return view('superadmin.request-karyawan.index', compact(
             'title', 
-            'requestKaryawans', // Ubah dari $departemens menjadi $requestKaryawans
+            'requestKaryawans',
             'totalMenunggu',
             'totalDisetujui',
             'totalDitolak',
-            'totalRequest'
+            'totalRequest',
+            'departemens' // Tambahkan departemens ke view
         ));
     }
 
@@ -117,6 +119,28 @@ class RequestKaryawanController extends Controller
                 'acc_security_in' => 1,
                 'acc_security_out' => 1
             ]);
+
+            // Mendapatkan kode departemen
+            $departemen = Departemen::find($validated['departemen_id']);
+            $departemenCode = $departemen->code;
+
+            // Generate nomor urut
+            $today = now();
+            $year = $today->format('y'); // Tahun 2 digit
+            $month = $today->format('m'); // Bulan 2 digit
+            $day = $today->format('d'); // Tanggal 2 digit
+
+            // Hitung nomor urut untuk hari ini berdasarkan departemen
+            $lastRequest = RequestKaryawan::where('departemen_id', $validated['departemen_id'])
+                                        ->whereDate('created_at', $today->toDateString())
+                                        ->latest()
+                                        ->first();
+            $nextSequence = $lastRequest ? (int) substr($lastRequest->no_surat, strrpos($lastRequest->no_surat, '/') - 3, 3) + 1 : 1;
+            $nomorUrut = str_pad($nextSequence, 3, '0', STR_PAD_LEFT);
+
+            // Buat no_surat
+            $noSurat = "SIP/{$departemenCode}/{$nomorUrut}/{$day}/{$month}/{$year}";
+            $validated['no_surat'] = $noSurat;
 
             // Buat request karyawan baru
             $requestKaryawan = RequestKaryawan::create($validated);
@@ -256,6 +280,139 @@ class RequestKaryawanController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Permohonan izin berhasil disetujui'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update status persetujuan permohonan izin keluar karyawan
+     * 
+     * @param int $id ID request karyawan
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateStatus($id, Request $request)
+    {
+        try {
+            // Ambil data request karyawan
+            $requestKaryawan = RequestKaryawan::find($id);
+
+            // Cek apakah data request karyawan ada
+            if (!$requestKaryawan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data Request Karyawan tidak ditemukan'
+                ], 404);
+            }
+
+            // Update status berdasarkan input
+            $statuses = $request->input('statuses');
+            
+            if (isset($statuses['lead'])) {
+                $requestKaryawan->acc_lead = $statuses['lead'];
+            }
+            if (isset($statuses['hr-ga'])) {
+                $requestKaryawan->acc_hr_ga = $statuses['hr-ga'];
+            }
+            if (isset($statuses['security-out'])) {
+                $requestKaryawan->acc_security_out = $statuses['security-out'];
+            }
+            if (isset($statuses['security-in'])) {
+                $requestKaryawan->acc_security_in = $statuses['security-in'];
+            }
+
+            // Simpan perubahan
+            $requestKaryawan->save();
+
+            // Buat notifikasi
+            $users = \App\Models\User::whereHas('role', function($query) {
+                $query->whereIn('slug', ['admin', 'lead', 'hr-ga', 'security']);
+            })->get();
+
+            foreach($users as $user) {
+                Notification::create([
+                    'user_id' => $user->id,
+                    'title' => 'Update Status Permohonan Izin',
+                    'message' => 'Status permohonan izin atas nama ' . $requestKaryawan->nama . 
+                               ' telah diperbarui',
+                    'type' => 'karyawan',
+                    'status' => 'pending',
+                    'is_read' => false
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Status berhasil diperbarui'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update data permohonan izin keluar karyawan
+     * 
+     * @param int $id ID request karyawan
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function update($id, Request $request)
+    {
+        try {
+            Log::info('Attempting to update RequestKaryawan with ID: ' . $id);
+            // Validasi input
+            $validated = $request->validate([
+                'nama' => 'required|string|max:255',
+                'departemen_id' => 'required|exists:departemens,id',
+                'keperluan' => 'required|string',
+                'jam_in' => 'required',
+                'jam_out' => 'required',
+            ]);
+
+            // Ambil data request karyawan
+            $requestKaryawan = RequestKaryawan::find($id);
+
+            // Cek apakah data request karyawan ada
+            if (!$requestKaryawan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data Request Karyawan tidak ditemukan'
+                ], 404);
+            }
+
+            // Update data
+            $requestKaryawan->update($validated);
+
+            // Buat notifikasi
+            $users = \App\Models\User::whereHas('role', function($query) {
+                $query->whereIn('slug', ['admin', 'lead', 'hr-ga', 'security']);
+            })->get();
+
+            foreach($users as $user) {
+                Notification::create([
+                    'user_id' => $user->id,
+                    'title' => 'Update Data Permohonan Izin Karyawan',
+                    'message' => 'Data permohonan izin karyawan ' . $requestKaryawan->nama . 
+                               ' dari departemen ' . $requestKaryawan->departemen->name . 
+                               ' telah diperbarui',
+                    'type' => 'karyawan',
+                    'status' => 'pending',
+                    'is_read' => false
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data berhasil diperbarui'
             ]);
         } catch (\Exception $e) {
             return response()->json([
