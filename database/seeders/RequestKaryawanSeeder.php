@@ -22,12 +22,14 @@ class RequestKaryawanSeeder extends Seeder
                       'Urusan pribadi', 'Kunjungan ke customer', 'Konsultasi dengan vendor', 'Survey lokasi',
                       'Training eksternal', 'Seminar industri', 'Kunjungan ke pameran', 'Koordinasi tim'];
         $jamOuts = ['13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
-        $jamIns = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+        $jamIns = ['14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
         $accStatuses = [1, 2, 3]; // 1 = menunggu, 2 = disetujui, 3 = ditolak
 
         // Generate random date within last 90 days
         $endDate = now();
         $startDate = now()->subDays(90);
+
+        static $sequenceCounters = []; // Inisialisasi penghitung urutan per departemen dan tanggal
 
         foreach ($departemens as $departemen) {
             // Buat 3 data random untuk setiap departemen
@@ -36,18 +38,52 @@ class RequestKaryawanSeeder extends Seeder
                 $keperluan = $keperluans[array_rand($keperluans)];
                 $jamOut = $jamOuts[array_rand($jamOuts)];
                 $jamIn = $jamIns[array_rand(array_filter($jamIns, function($jam) use ($jamOut) {
-                    return strtotime($jam) > strtotime($jamOut);
+                    return strtotime($jam) > strtotime($jamOut) && 
+                           strtotime($jam) <= strtotime($jamOut) + 3600; // Max 1 hour difference
                 }))];
                 $accLead = $accStatuses[array_rand($accStatuses)];
                 $accHrGa = $accLead == 2 ? $accStatuses[array_rand($accStatuses)] : 1;
                 $accSecurityOut = ($accLead == 2 && $accHrGa == 2) ? $accStatuses[array_rand($accStatuses)] : 1;
                 $accSecurityIn = ($accLead == 2 && $accHrGa == 2 && $accSecurityOut == 2) ? $accStatuses[array_rand($accStatuses)] : 1;
 
-                // Generate random timestamp between start and end date
+                // Generate random timestamp between start and end date, and make it slightly unique
                 $randomTimestamp = $startDate->timestamp + rand(0, $endDate->timestamp - $startDate->timestamp);
-                $createdAt = date('Y-m-d H:i:s', $randomTimestamp);
+                $createdAt = date('Y-m-d H:i:s', $randomTimestamp) . '.' . str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT); // Add microseconds
+
+                // Mendapatkan kode departemen
+                $departemenCode = $departemen->code;
+
+                // Generate nomor urut
+                $currentDate = new \DateTime($createdAt);
+                $year = $currentDate->format('y'); // Tahun 2 digit
+                $month = $currentDate->format('m'); // Bulan 2 digit
+                $day = $currentDate->format('d'); // Tanggal 2 digit
+
+                $dateKey = $departemen->id . '-' . $currentDate->format('Y-m-d');
+                if (!isset($sequenceCounters[$dateKey])) {
+                    // Inisialisasi penghitung untuk departemen dan tanggal ini
+                    $lastRequest = RequestKaryawan::where('departemen_id', $departemen->id)
+                                                ->whereDate('created_at', $currentDate->format('Y-m-d'))
+                                                ->orderBy('id', 'desc') // Urutkan berdasarkan ID untuk mendapatkan yang terakhir
+                                                ->first();
+
+                    $maxExistingSequence = 0;
+                    if ($lastRequest) {
+                        $parts = explode('/', $lastRequest->no_surat);
+                        if (count($parts) >= 3 && is_numeric($parts[2])) {
+                            $maxExistingSequence = (int) $parts[2];
+                        }
+                    }
+                    $sequenceCounters[$dateKey] = $maxExistingSequence;
+                }
+                $sequenceCounters[$dateKey]++;
+                $nomorUrut = str_pad($sequenceCounters[$dateKey], 3, '0', STR_PAD_LEFT);
+
+                // Buat no_surat
+                $noSurat = "SIP/{$departemenCode}/{$nomorUrut}/{$day}/{$month}/{$year}";
 
                 $requestKaryawan = RequestKaryawan::create([
+                    'no_surat' => $noSurat,
                     'nama' => $nama,
                     'departemen_id' => $departemen->id,
                     'keperluan' => $keperluan,

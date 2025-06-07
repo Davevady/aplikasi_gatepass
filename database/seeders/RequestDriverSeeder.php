@@ -6,6 +6,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\RequestDriver;
 use App\Models\Notification;
+use App\Models\Ekspedisi;
 
 class RequestDriverSeeder extends Seeder
 {
@@ -14,7 +15,7 @@ class RequestDriverSeeder extends Seeder
      */
     public function run(): void
     {
-        $ekspedisis = ['PT. Jaya Abadi', 'PT. Sejahtera', 'PT. Maju Bersama', 'PT. Sukses Makmur', 'PT. Abadi Jaya'];
+        $ekspedisis = Ekspedisi::all();
         $nopols = ['B 1234 ABC', 'B 5678 DEF', 'B 9012 GHI', 'B 3456 JKL', 'B 7890 MNO'];
         $drivers = ['Budi Santoso', 'Joko Susilo', 'Andi Wijaya', 'Rudi Hartono', 'Siti Aminah', 'Ahmad Hidayat'];
         $noHps = ['081234567890', '081112223344', '089876543210', '081234567891', '081234567892', '081234567893'];
@@ -23,17 +24,18 @@ class RequestDriverSeeder extends Seeder
         $keperluans = ['Pengiriman barang ke gudang', 'Pengambilan material', 'Pengiriman dokumen', 
                        'Pengambilan barang', 'Pengiriman paket', 'Pengambilan dokumen'];
         $jamOuts = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00'];
-        $jamIns = ['10:00', '11:00', '12:00', '14:00', '15:00', '16:00'];
+        $jamIns = ['09:30', '10:30', '11:30', '13:30', '14:30', '15:30'];
         $accStatuses = [1, 2]; // 1 = menunggu, 2 = disetujui
 
         // Buat 10 data random
         for ($i = 0; $i < 10; $i++) {
             $jamOut = $jamOuts[array_rand($jamOuts)];
             $jamIn = $jamIns[array_rand(array_filter($jamIns, function($jam) use ($jamOut) {
-                return strtotime($jam) > strtotime($jamOut);
+                return strtotime($jam) > strtotime($jamOut) && 
+                       strtotime($jam) <= strtotime($jamOut . ' +1 hour');
             }))];
 
-            $namaEkspedisi = $ekspedisis[array_rand($ekspedisis)];
+            $ekspedisi = $ekspedisis->random();
             $nopol = $nopols[array_rand($nopols)];
             $accAdmin = $accStatuses[array_rand($accStatuses)];
             $accHeadUnit = $accAdmin == 2 ? $accStatuses[array_rand($accStatuses)] : 1;
@@ -44,8 +46,32 @@ class RequestDriverSeeder extends Seeder
             $randomDays = rand(0, 90);
             $createdAt = now()->subDays($randomDays);
 
+            // Generate nomor urut
+            $currentDate = new \DateTime($createdAt->toDateString());
+            $year = $currentDate->format('y'); // Tahun 2 digit
+            $month = $currentDate->format('m'); // Bulan 2 digit
+            $day = $currentDate->format('d'); // Tanggal 2 digit
+
+            // Inisialisasi penghitung urutan per tanggal
+            static $dailySequence = []; // Static agar nilai tidak hilang antar iterasi
+            $dateKey = $currentDate->format('Y-m-d');
+
+            if (!isset($dailySequence[$dateKey])) {
+                // Ambil nomor urut terakhir dari database untuk tanggal ini
+                $lastRequest = RequestDriver::whereDate('created_at', $dateKey)
+                                            ->latest('id') // Urutkan berdasarkan ID untuk konsistensi
+                                            ->first();
+                $dailySequence[$dateKey] = $lastRequest ? (int) substr($lastRequest->no_surat, strrpos($lastRequest->no_surat, '/') - 3, 3) : 0;
+            }
+            $dailySequence[$dateKey]++;
+            $nomorUrut = str_pad($dailySequence[$dateKey], 3, '0', STR_PAD_LEFT);
+
+            // Buat no_surat
+            $noSurat = "SID/{$nomorUrut}/{$day}/{$month}/{$year}";
+
             $requestDriver = RequestDriver::create([
-                'nama_ekspedisi' => $namaEkspedisi,
+                'no_surat' => $noSurat,
+                'ekspedisi_id' => $ekspedisi->id,
                 'nopol_kendaraan' => $nopol,
                 'nama_driver' => $drivers[array_rand($drivers)],
                 'no_hp_driver' => $noHps[array_rand($noHps)],
@@ -73,7 +99,7 @@ class RequestDriverSeeder extends Seeder
                     Notification::create([
                         'user_id' => $user->id,
                         'title' => 'Disetujui Checker',
-                        'message' => 'Permohonan izin driver ' . $namaEkspedisi . 
+                        'message' => 'Permohonan izin driver ' . $ekspedisi->nama_ekspedisi . 
                                    ' dengan nopol ' . $nopol . 
                                    ' telah disetujui oleh Checker dan menunggu persetujuan Head Unit',
                         'type' => 'driver',
@@ -94,7 +120,7 @@ class RequestDriverSeeder extends Seeder
                         Notification::create([
                             'user_id' => $user->id,
                             'title' => 'Disetujui Head Unit',
-                            'message' => 'Permohonan izin driver ' . $namaEkspedisi . 
+                            'message' => 'Permohonan izin driver ' . $ekspedisi->nama_ekspedisi . 
                                        ' dengan nopol ' . $nopol . 
                                        ' telah disetujui oleh Head Unit dan menunggu persetujuan Security Out',
                             'type' => 'driver',
@@ -115,7 +141,7 @@ class RequestDriverSeeder extends Seeder
                             Notification::create([
                                 'user_id' => $user->id,
                                 'title' => 'Disetujui Security Out',
-                                'message' => 'Permohonan izin driver ' . $namaEkspedisi . 
+                                'message' => 'Permohonan izin driver ' . $ekspedisi->nama_ekspedisi . 
                                            ' dengan nopol ' . $nopol . 
                                            ' telah disetujui oleh Security Out dan menunggu driver kembali',
                                 'type' => 'driver',
@@ -135,8 +161,8 @@ class RequestDriverSeeder extends Seeder
                             foreach($users as $user) {
                                 Notification::create([
                                     'user_id' => $user->id,
-                                    'title' => 'Permohonan Izin Driver ' . $namaEkspedisi . ' Disetujui Security In',
-                                    'message' => 'Permohonan izin driver atas nama ' . $namaEkspedisi . 
+                                    'title' => 'Permohonan Izin Driver ' . $ekspedisi->nama_ekspedisi . ' Disetujui Security In',
+                                    'message' => 'Permohonan izin driver atas nama ' . $ekspedisi->nama_ekspedisi . 
                                                ' dengan nopol ' . $nopol . 
                                                ' untuk keperluan ' . $requestDriver->keperluan . 
                                                ' telah disetujui oleh Security In dan permohonan selesai',

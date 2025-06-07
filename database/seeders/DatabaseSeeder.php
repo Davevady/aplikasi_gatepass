@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
         $this->call(DepartemenSeeder::class);
         $this->call(RoleSeeder::class);
         $this->call(UserSeeder::class);
+        $this->call(EkspedisiSeeder::class);
         $this->call(RequestKaryawanSeeder::class);
         $this->call(RequestDriverSeeder::class);
         $this->call(NotificationSeeder::class);
