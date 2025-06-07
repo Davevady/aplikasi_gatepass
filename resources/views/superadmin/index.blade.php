@@ -230,8 +230,13 @@
                             <div class="card">
                                 <div class="card-header">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <div class="card-title">Permohonan Terbaru</div>
+                                        <div class="card-title">Daftar Pemohon</div>
                                         <div class="d-flex">
+                                            <select class="form-control mr-2" id="filterType" style="width: 150px;">
+                                                <option value="all">Semua Tipe</option>
+                                                <option value="Karyawan">Karyawan</option>
+                                                <option value="Driver">Driver</option>
+                                            </select>
                                             <select class="form-control mr-2" id="filterMonth" style="width: 150px;">
                                                 <option value="1">Januari</option>
                                                 <option value="2">Februari</option>
@@ -256,7 +261,7 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
-                                        <table class="table table-hover">
+                                        <table class="table table-hover" id="latestRequestsTable">
                                             <thead>
                                                 <tr>
                                                     <th>No.</th>
@@ -268,7 +273,7 @@
                                                     <th>Tipe</th>
                                                 </tr>
                                             </thead>
-                                            <tbody id="latestRequestsTable">
+                                            <tbody>
                                             </tbody>
                                         </table>
                                     </div>
@@ -316,6 +321,11 @@
     </div>
 
     @include('layout.superadmin.script')
+    
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
+    
     <script>
         $(document).ready(function() {
             // Auto hide alerts after 5 seconds
@@ -382,26 +392,56 @@
                 showStatusModal('ditolak');
             });
 
-            // Fungsi untuk memuat data permohonan terbaru
-            function loadLatestRequests() {
+            // Inisialisasi DataTable
+            var table = $('#latestRequestsTable').DataTable({
+                processing: true,
+                serverSide: false,
+                pageLength: 10,
+                language: {
+                    search: "Cari:",
+                    lengthMenu: "Tampilkan _MENU_ data per halaman",
+                    zeroRecords: "Data tidak ditemukan",
+                    info: "Menampilkan halaman _PAGE_ dari _PAGES_",
+                    infoEmpty: "Tidak ada data yang tersedia",
+                    infoFiltered: "(difilter dari _MAX_ total data)",
+                    paginate: {
+                        first: "Pertama",
+                        last: "Terakhir",
+                        next: "Selanjutnya",
+                        previous: "Sebelumnya"
+                    }
+                },
+                columns: [
+                    { data: null, render: function (data, type, row, meta) { return meta.row + meta.settings._iDisplayStart + 1; } },
+                    { data: 'nama' },
+                    { data: 'tanggal' },
+                    { data: 'jam_out' },
+                    { data: 'jam_in' },
+                    { 
+                        data: 'status',
+                        render: function(data, type, row) {
+                            return `<span class="badge badge-${row.status}">${row.text}</span>`;
+                        }
+                    },
+                    { data: 'tipe' }
+                ]
+            });
+
+            // Fungsi untuk memuat data
+            function loadData() {
                 const month = $('#filterMonth').val();
                 const year = $('#filterYear').val();
+                const type = $('#filterType').val();
                 
                 $.get(`/dashboard/latest-requests?month=${month}&year=${year}`, function(data) {
-                    $('#latestRequestsTable').empty();
-                    data.forEach((item, index) => {
-                        $('#latestRequestsTable').append(`
-                            <tr>
-                                <td>${index + 1}</td>
-                                <td>${item.nama}</td>
-                                <td>${item.tanggal}</td>
-                                <td>${item.jam_out}</td>
-                                <td>${item.jam_in}</td>
-                                <td><span class="badge badge-${item.status}">${item.text}</span></td>
-                                <td>${item.tipe}</td>
-                            </tr>
-                        `);
-                    });
+                    // Filter berdasarkan tipe jika bukan 'all'
+                    if (type !== 'all') {
+                        data = data.filter(item => item.tipe === type);
+                    }
+                    
+                    // Clear dan reload data
+                    table.clear();
+                    table.rows.add(data).draw();
                 });
             }
 
@@ -411,11 +451,11 @@
             $('#filterYear').val(currentDate.getFullYear());
 
             // Load data awal
-            loadLatestRequests();
+            loadData();
 
             // Event change untuk filter
-            $('#filterMonth, #filterYear').change(function() {
-                loadLatestRequests();
+            $('#filterMonth, #filterYear, #filterType').change(function() {
+                loadData();
             });
 
             // Inisialisasi grafik per minggu

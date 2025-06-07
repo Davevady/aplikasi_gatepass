@@ -105,20 +105,19 @@ class DashboardController extends Controller
         // Total request keseluruhan yang terlihat oleh user
         $totalRequest = $totalKaryawanRequest + $totalDriverRequest;
 
-        // Mengambil 2 permohonan karyawan terbaru dengan relasi departemen
-        $latestKaryawanRequests = collect(); // Initialize as empty collection
+        // Mengambil semua permohonan karyawan dengan relasi departemen
+        $karyawanRequests = collect(); // Initialize as empty collection
         if ($user->role_id != 4 && $user->role_id != 5) { // Bukan role checker dan head unit
-            $latestKaryawanRequests = RequestKaryawan::with('departemen')
+            $karyawanRequests = RequestKaryawan::with(['departemen'])
                 ->orderBy('created_at', 'desc')
-                ->take(2)
                 ->get();
         }
 
-        // Mengambil 2 permohonan driver terbaru
-        $latestDriverRequests = collect(); // Initialize as empty collection
+        // Mengambil semua permohonan driver
+        $driverRequests = collect(); // Initialize as empty collection
         if ($user->role_id != 2 && $user->role_id != 3) { // Bukan role lead dan hr-ga
-            $latestDriverRequests = RequestDriver::orderBy('created_at', 'desc')
-                ->take(2)
+            $driverRequests = RequestDriver::with('ekspedisi')
+                ->orderBy('created_at', 'desc')
                 ->get();
         }
 
@@ -131,13 +130,13 @@ class DashboardController extends Controller
         return view('superadmin.index', compact(
             'title',
             'totalMenunggu',
-            'totalDisetujui',
+            'totalDisetujui', 
             'totalDitolak',
             'totalRequest',
             'totalKaryawanRequest',
             'totalDriverRequest',
-            'latestKaryawanRequests',
-            'latestDriverRequests',
+            'karyawanRequests',
+            'driverRequests',
             'monthlyData',
             'years'
         ));
@@ -434,7 +433,7 @@ class DashboardController extends Controller
 
         // Data karyawan
         if ($user->role_id != 4 && $user->role_id != 5) {
-            $karyawanRequests = RequestKaryawan::with('departemen')
+            $karyawanRequests = RequestKaryawan::with(['departemen'])
                 ->whereMonth('created_at', $month)
                 ->whereYear('created_at', $year)
                 ->orderBy('created_at', 'desc')
@@ -516,7 +515,8 @@ class DashboardController extends Controller
 
         // Data driver
         if ($user->role_id != 2 && $user->role_id != 3) {
-            $driverRequests = RequestDriver::whereMonth('created_at', $month)
+            $driverRequests = RequestDriver::with(['ekspedisi'])
+                ->whereMonth('created_at', $month)
                 ->whereYear('created_at', $year)
                 ->orderBy('created_at', 'desc')
                 ->get()
@@ -582,7 +582,7 @@ class DashboardController extends Controller
 
                     return [
                         'nama' => $item->nama_driver,
-                        'departemen' => '-',
+                        'departemen' => $item->ekspedisi ? $item->ekspedisi->nama_ekspedisi : '-',
                         'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
                         'jam_out' => $item->jam_out,
                         'jam_in' => $item->jam_in,
