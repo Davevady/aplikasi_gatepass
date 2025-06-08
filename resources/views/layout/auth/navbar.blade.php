@@ -21,6 +21,11 @@
                                 <i class="bi bi-box-arrow-in-right me-1"></i> Login
                             </a>
                         </li>
+                        <li class="nav-item ms-lg-2">
+                            <a class="btn btn-outline-light rounded-pill px-4 py-2 fw-semibold shadow-sm me-2" href="{{ route('search') }}">
+                                <i class="bi bi-search me-1"></i> Cari Surat
+                            </a>
+                        </li>
                     @endif
                 @endif
                 @if(Request::is('login'))

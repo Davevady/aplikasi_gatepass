@@ -10,6 +10,7 @@ use App\Http\Controllers\DepartemenController;
 use App\Http\Controllers\EkspedisiController;
 use App\Http\Controllers\ExportController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SearchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,6 +35,9 @@ Route::post('/login', [UserController::class, 'authLogin'])->name('auth.login');
 Route::get('/register', [UserController::class, 'register'])->name('register');
 Route::post('/register', [UserController::class, 'authRegister'])->name('auth.register');
 Route::get('/logout', [UserController::class, 'logout'])->name('logout');
+
+Route::get('/search', [SearchController::class, 'index'])->name('search.index');
+Route::get('/search/result', [SearchController::class, 'search'])->name('search');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
