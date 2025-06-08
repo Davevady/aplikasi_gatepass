@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('no_surat')->unique();
             $table->string('nama');
+            $table->string('no_telp');
             $table->foreignId('departemen_id')->constrained('departemens')->onDelete('cascade');
             $table->string('keperluan');
             $table->string('jam_out');

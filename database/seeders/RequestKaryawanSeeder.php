@@ -85,6 +85,7 @@ class RequestKaryawanSeeder extends Seeder
                 $requestKaryawan = RequestKaryawan::create([
                     'no_surat' => $noSurat,
                     'nama' => $nama,
+                    'no_telp' => '0895353076420',
                     'departemen_id' => $departemen->id,
                     'keperluan' => $keperluan,
                     'jam_out' => $jamOut,
