@@ -8,6 +8,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DepartemenController;
 use App\Http\Controllers\EkspedisiController;
+use App\Http\Controllers\ExportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -46,6 +47,11 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/request-karyawan/{id}', [RequestKaryawanController::class, 'update'])->name('request-karyawan.update');
         Route::post('/request-karyawan/{id}/acc/{role_id}', [RequestKaryawanController::class, 'accRequest'])->name('request-karyawan.acc');
         Route::post('/request-karyawan/{id}/update-status', [RequestKaryawanController::class, 'updateStatus'])->name('request-karyawan.update-status');
+        
+        // Export routes for Request Karyawan
+        Route::get('/request-karyawan/export/preview/{month}/{year}/{type?}', [RequestKaryawanController::class, 'exportPDF'])->name('request-karyawan.export.preview');
+        Route::get('/request-karyawan/export/pdf/{month}/{year}/{type?}', [RequestKaryawanController::class, 'exportPDF'])->name('request-karyawan.export.pdf');
+        Route::get('/request-karyawan/export/excel/{month}/{year}/{type?}', [RequestKaryawanController::class, 'exportExcel'])->name('request-karyawan.export.excel');
     });
 
     // request driver - hanya bisa diakses admin, security, checker, head-unit  
@@ -54,6 +60,11 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/request-driver/{id}', [RequestDriverController::class, 'update'])->name('request-driver.update');
         Route::post('/request-driver/{id}/acc/{role_id}', [RequestDriverController::class, 'accRequest'])->name('request-driver.acc');
         Route::post('/request-driver/{id}/update-status', [RequestDriverController::class, 'updateStatus'])->name('request-driver.update-status');
+        
+        // Export routes for Request Driver
+        Route::get('/request-driver/export/preview/{month}/{year}/{type?}', [RequestDriverController::class, 'exportPDF'])->name('request-driver.export.preview');
+        Route::get('/request-driver/export/pdf/{month}/{year}/{type?}', [RequestDriverController::class, 'exportPDF'])->name('request-driver.export.pdf');
+        Route::get('/request-driver/export/excel/{month}/{year}/{type?}', [RequestDriverController::class, 'exportExcel'])->name('request-driver.export.excel');
     });
     
     // bisa diakses semua user yang sudah login
@@ -84,4 +95,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/ekspedisi/store', [EkspedisiController::class, 'store'])->name('ekspedisi.store');
     Route::put('/ekspedisi/update/{id}', [EkspedisiController::class, 'update'])->name('ekspedisi.update');
     Route::delete('/ekspedisi/delete/{id}', [EkspedisiController::class, 'destroy'])->name('ekspedisi.destroy');
+
+    Route::get('/export/dashboard/preview/{month}/{year}/{type?}', [ExportController::class, 'previewPDF'])->name('export.dashboard.preview');
+    Route::get('/export/dashboard/pdf/{month}/{year}/{type?}', [ExportController::class, 'exportPDF'])->name('export.dashboard.pdf');
+    Route::get('/export/dashboard/excel/{month}/{year}/{type?}', [ExportController::class, 'exportExcel'])->name('export.dashboard.excel');
 });

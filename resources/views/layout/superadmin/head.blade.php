@@ -11,24 +11,22 @@
 
 	<!-- Fonts and icons -->
 	<script src="{{ asset('assets/js/plugin/webfont/webfont.min.js') }}"></script>
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
-	<script>
-		WebFont.load({
-			google: {"families":["Lato:300,400,700,900"]},
-			custom: {"families":["Flaticon", "Font Awesome 5 Solid", "Font Awesome 5 Regular", "Font Awesome 5 Brands", "simple-line-icons"], urls: ['{{ asset('assets/css/fonts.min.css') }}']},
-			active: function() {
-				sessionStorage.fonts = true;
-			}
-		});
-	</script>
+    <script>
+        WebFont.load({
+            google: {"families": ["Lato:300,400,700,900"]},
+            custom: {"families": ["Flaticon", "Font Awesome 5 Solid", "Font Awesome 5 Regular", "Font Awesome 5 Brands", "simple-line-icons"], "urls": ["{{ asset('assets/css/fonts.min.css') }}"]},
+            active: function() {
+                sessionStorage.fonts = true;
+            }
+        });
+    </script>
 
 	<!-- CSS Files -->
 	<link rel="stylesheet" href="{{ asset('assets/css/bootstrap.min.css') }}">
 	<link rel="stylesheet" href="{{ asset('assets/css/atlantis.css') }}">
 	
 	<!-- DataTables CSS -->
-	<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
+	<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css">
 	
     <style>
         .floating-alert {
@@ -60,7 +58,6 @@
 
             const alerts = document.querySelectorAll('.floating-alert');
             alerts.forEach((alert, index) => {
-                // Menghitung posisi bottom untuk setiap alert
                 const bottomPosition = 70 + (index * (alert.offsetHeight + 10));
                 alert.style.bottom = `${bottomPosition}px`;
                 alert.style.opacity = '1';

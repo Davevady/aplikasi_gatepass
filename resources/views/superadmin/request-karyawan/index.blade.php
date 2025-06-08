@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
     @include('layout.superadmin.head')
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 </head>
 <body>
     <div class="wrapper">
@@ -123,6 +124,98 @@
                             <div class="card">
                                 <div class="card-header">
                                     <div class="card-title">Daftar Permohonan Izin Keluar</div>
+                                    <div class="d-flex">
+                                        <select class="form-control mr-2" id="filterMonthKaryawan" style="width: 150px;">
+                                            <option value="1">Januari</option>
+                                            <option value="2">Februari</option>
+                                            <option value="3">Maret</option>
+                                            <option value="4">April</option>
+                                            <option value="5">Mei</option>
+                                            <option value="6">Juni</option>
+                                            <option value="7">Juli</option>
+                                            <option value="8">Agustus</option>
+                                            <option value="9">September</option>
+                                            <option value="10">Oktober</option>
+                                            <option value="11">November</option>
+                                            <option value="12">Desember</option>
+                                        </select>
+                                        <select class="form-control mr-2" id="filterYearKaryawan" style="width: 100px;">
+                                            @foreach($years as $year)
+                                                <option value="{{ $year }}">{{ $year }}</option>
+                                            @endforeach
+                                        </select>
+                                        <div class="btn-group ml-2">
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                    <i class="fas fa-eye"></i> Preview
+                                                </button>
+                                                <div class="dropdown-menu p-2" style="width: 200px;">
+                                                    <div class="form-check mb-2 ml-2">
+                                                        <input class="form-check-input" type="radio" name="previewTypeKaryawan" id="previewFilteredKaryawan" value="filtered" checked>
+                                                        <label class="form-check-label" for="previewFilteredKaryawan">
+                                                            Data yang Ditampilkan
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check ml-2">
+                                                        <input class="form-check-input" type="radio" name="previewTypeKaryawan" id="previewAllKaryawan" value="all">
+                                                        <label class="form-check-label" for="previewAllKaryawan">
+                                                            Semua Data
+                                                        </label>
+                                                    </div>
+                                                    <hr class="my-2">
+                                                    <button type="button" class="btn btn-info btn-sm btn-block" onclick="previewPDFKaryawan()">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                    <i class="fas fa-file-pdf"></i> PDF
+                                                </button>
+                                                <div class="dropdown-menu p-2" style="width: 200px;">
+                                                    <div class="form-check mb-2 ml-2">
+                                                        <input class="form-check-input" type="radio" name="pdfTypeKaryawan" id="pdfFilteredKaryawan" value="filtered" checked>
+                                                        <label class="form-check-label" for="pdfFilteredKaryawan">
+                                                            Data yang Ditampilkan
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check ml-2">
+                                                        <input class="form-check-input" type="radio" name="pdfTypeKaryawan" id="pdfAllKaryawan" value="all">
+                                                        <label class="form-check-label" for="pdfAllKaryawan">
+                                                            Semua Data
+                                                        </label>
+                                                    </div>
+                                                    <hr class="my-2">
+                                                    <button type="button" class="btn btn-primary btn-sm btn-block" onclick="exportDataKaryawan('pdf')">
+                                                        <i class="fas fa-file-pdf"></i> Export PDF
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                    <i class="fas fa-file-excel"></i> Excel
+                                                </button>
+                                                <div class="dropdown-menu p-2" style="width: 200px;">
+                                                    <div class="form-check mb-2 ml-2">
+                                                        <input class="form-check-input" type="radio" name="excelTypeKaryawan" id="excelFilteredKaryawan" value="filtered" checked>
+                                                        <label class="form-check-label" for="excelFilteredKaryawan">
+                                                            Data yang Ditampilkan
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check ml-2">
+                                                        <input class="form-check-input" type="radio" name="excelTypeKaryawan" id="excelAllKaryawan" value="all">
+                                                        <label class="form-check-label" for="excelAllKaryawan">
+                                                            Semua Data
+                                                        </label>
+                                                    </div>
+                                                    <hr class="my-2">
+                                                    <button type="button" class="btn btn-success btn-sm btn-block" onclick="exportDataKaryawan('excel')">
+                                                        <i class="fas fa-file-excel"></i> Export Excel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-container">
@@ -131,8 +224,10 @@
                                                 <thead>
                                                     <tr>
                                                         <th>No.</th>
+                                                        <th>No. Surat</th>
                                                         <th>Departemen</th>
                                                         <th>Nama Karyawan</th>
+                                                        <th>No. Telp</th>
                                                         <th>Tanggal</th>
                                                         <th>Jam Keluar</th>
                                                         <th>Jam Kembali</th>
@@ -149,70 +244,22 @@
                                                         @foreach($requestKaryawans as $request)
                                                             <tr>
                                                                 <td>{{ $counter++ }}</td>
+                                                                <td>{{ $request->no_surat }}</td>
                                                                 <td>{{ $request->departemen->name }}</td>
                                                                 <td>{{ $request->nama }}</td>
+                                                                <td>{{ $request->no_telp }}</td>
                                                                 <td>{{ \Carbon\Carbon::parse($request->created_at)->format('d/m/Y') }}</td>
                                                                 <td>{{ $request->jam_out }}</td>
                                                                 <td>{{ $request->jam_in }}</td>
                                                                 <td>{{ $request->keperluan }}</td>
                                                                 <td>
-                                                                    @php
-                                                                        $status = 'warning'; // default menunggu
-                                                                        $text = 'Menunggu';
-                                                                        
-                                                                        // Cek jika ada yang menolak
-                                                                        if($request->acc_lead == 3) {
-                                                                            $status = 'danger';
-                                                                            $text = 'Ditolak Lead';
-                                                                        } 
-                                                                        elseif($request->acc_hr_ga == 3) {
-                                                                            $status = 'danger';
-                                                                            $text = 'Ditolak HR GA';
-                                                                        }
-                                                                        // Cek urutan persetujuan sesuai alur jika tidak ditolak
-                                                                        elseif($request->acc_lead == 1) {
-                                                                            $status = 'warning';
-                                                                            $text = 'Menunggu Lead';
-                                                                        }
-                                                                        elseif($request->acc_lead == 2 && $request->acc_hr_ga == 1) {
-                                                                            $status = 'warning';
-                                                                            $text = 'Menunggu HR GA';
-                                                                        }
-                                                                        // Jika sudah disetujui Lead dan HR GA
-                                                                        elseif($request->acc_lead == 2 && $request->acc_hr_ga == 2) {
-                                                                            // Cek status security
-                                                                            if($request->acc_security_out == 1) {
-                                                                                 // Cek status hangus (jam in sudah lewat tapi belum keluar)
-                                                                                if (\Carbon\Carbon::parse($request->jam_in)->isPast()) {
-                                                                                    $status = 'danger';
-                                                                                    $text = 'Hangus';
-                                                                                } else {
-                                                                                    $status = 'info';
-                                                                                    $text = 'Disetujui (Belum Keluar)';
-                                                                                }
-                                                                            } elseif ($request->acc_security_out == 2) {
-                                                                                // Cek status security in
-                                                                                if ($request->acc_security_in == 1) {
-                                                                                    // Cek status terlambat (sudah keluar tapi belum kembali)
-                                                                                    if (\Carbon\Carbon::parse($request->jam_in)->isPast()) {
-                                                                                        $status = 'warning';
-                                                                                        $text = 'Terlambat';
-                                                                                    } else {
-                                                                                        $status = 'info';
-                                                                                        $text = 'Sudah Keluar (Belum Kembali)';
-                                                                                    }
-                                                                                } elseif ($request->acc_security_in == 2) {
-                                                                                    $status = 'success';
-                                                                                    $text = 'Sudah Kembali';
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    @endphp
-                                                                    <span class="badge badge-{{ $status }}">{{ $text }}</span>
+                                                                    <span class="badge badge-{{ $request->status_badge }}">{{ $request->status_text }}</span>
                                                                 </td>
                                                                 <td>
                                                                     <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#detailModal" 
+                                                                            data-no-surat="{{ $request->no_surat }}"
                                                                             data-nama="{{ $request->nama }}"
+                                                                            data-no-telp="{{ $request->no_telp }}"
                                                                             data-departemen="{{ $request->departemen->name }}"
                                                                             data-tanggal="{{ \Carbon\Carbon::parse($request->created_at)->format('d/m/Y') }}"
                                                                             data-jam-keluar="{{ $request->jam_out }}"
@@ -229,7 +276,9 @@
                                                                         </button>
                                                                         <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editModal"
                                                                                 data-id="{{ $request->id }}"
+                                                                                data-no-surat="{{ $request->no_surat }}"
                                                                                 data-nama="{{ $request->nama }}"
+                                                                                data-no-telp="{{ $request->no_telp }}"
                                                                                 data-departemen-id="{{ $request->departemen_id }}"
                                                                                 data-jam-keluar="{{ $request->jam_out }}"
                                                                                 data-jam-kembali="{{ $request->jam_in }}"
@@ -237,14 +286,14 @@
                                                                             <i class="fas fa-edit"></i> Edit
                                                                         </button>
                                                                         {{-- Tombol ACC untuk Role Lead --}}
-                                                                        @if(auth()->user()->role_id == 1 || (auth()->user()->role_id == 2 && $request->acc_lead == 1))
+                                                                        @if(auth()->user()->role_id == 1 || (auth()->user()->role_id == 2 && ($request->acc_lead == 1 || $request->acc_lead == 3)))
                                                                         <button type="button" class="btn btn-sm btn-success acc-btn" 
                                                                                 data-id="{{ $request->id }}"
                                                                                 data-role-id="{{ auth()->user()->role_id }}">
                                                                             <i class="fas fa-check"></i> ACC
                                                                         </button>
                                                                         {{-- Tombol ACC untuk Role HR GA --}}
-                                                                        @elseif(auth()->user()->role_id == 1 || (auth()->user()->role_id == 3 && $request->acc_hr_ga == 1 && $request->acc_lead == 2))
+                                                                        @elseif(auth()->user()->role_id == 1 || (auth()->user()->role_id == 3 && ($request->acc_hr_ga == 1 || $request->acc_hr_ga == 3) && $request->acc_lead == 2))
                                                                         <button type="button" class="btn btn-sm btn-success acc-btn" 
                                                                                 data-id="{{ $request->id }}"
                                                                                 data-role-id="{{ auth()->user()->role_id }}">
@@ -252,14 +301,14 @@
                                                                         </button>
                                                                         {{-- Tombol ACC untuk Role Security --}}
                                                                         @elseif(auth()->user()->role_id == 1 || (auth()->user()->role_id == 6 && $request->acc_lead == 2 && $request->acc_hr_ga == 2))
-                                                                            @if($request->acc_security_out == 1)
+                                                                            @if($request->acc_security_out == 1 || $request->acc_security_out == 3)
                                                                             {{-- Tombol ACC Out --}}
                                                                             <button type="button" class="btn btn-sm btn-success acc-btn" 
                                                                                     data-id="{{ $request->id }}"
                                                                                     data-role-id="{{ auth()->user()->role_id }}">
                                                                                 <i class="fas fa-sign-out-alt"></i> ACC Out
                                                                             </button>
-                                                                            @elseif($request->acc_security_out == 2 && $request->acc_security_in == 1)
+                                                                            @elseif($request->acc_security_out == 2 && ($request->acc_security_in == 1 || $request->acc_security_in == 3))
                                                                             {{-- Tombol ACC In --}}
                                                                             <button type="button" class="btn btn-sm btn-success acc-btn" 
                                                                                     data-id="{{ $request->id }}"
@@ -273,7 +322,7 @@
                                                         @endforeach
                                                     @else
                                                         <tr>
-                                                            <td colspan="9" class="text-center">Tidak ada data permohonan izin</td>
+                                                            <td colspan="11" class="text-center">Tidak ada data permohonan izin</td>
                                                         </tr>
                                                     @endif
                                                 </tbody>
@@ -294,7 +343,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="detailModalLabel">Detail Permohonan Izin</h5>
+                    <h5 class="modal-title" id="detailModalLabel">Detail Permohonan Izin Karyawan</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -302,7 +351,9 @@
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
+                            <p><strong>No. Surat:</strong></p>
                             <p><strong>Nama Karyawan:</strong></p>
+                            <p><strong>No. Telp:</strong></p>
                             <p><strong>Departemen:</strong></p>
                             <p><strong>Tanggal:</strong></p>
                             <p><strong>Jam Keluar:</strong></p>
@@ -310,7 +361,9 @@
                             <p><strong>Keperluan:</strong></p>
                         </div>
                         <div class="col-md-6">
+                            <p id="modal-no-surat"></p>
                             <p id="modal-nama"></p>
+                            <p id="modal-no-telp"></p>
                             <p id="modal-departemen"></p>
                             <p id="modal-tanggal"></p>
                             <p id="modal-jam-keluar"></p>
@@ -412,8 +465,16 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
+                                    <label for="edit_no_surat">No. Surat</label>
+                                    <input type="text" class="form-control" id="edit_no_surat" name="no_surat" required>
+                                </div>
+                                <div class="form-group">
                                     <label for="edit_nama">Nama Karyawan</label>
                                     <input type="text" class="form-control" id="edit_nama" name="nama" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit_no_telp">No. Telp</label>
+                                    <input type="text" class="form-control" id="edit_no_telp" name="no_telp" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="edit_departemen_id">Departemen</label>
@@ -519,32 +580,148 @@
 
     <script>
         $(document).ready(function() {
-            // Inisialisasi DataTable
-            $('#requestTable').DataTable({
-                "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Indonesian.json",
-                    "search": "Cari:",
-                    "lengthMenu": "Tampilkan _MENU_ data per halaman",
-                    "zeroRecords": "Tidak ada data yang ditemukan",
-                    "info": "Menampilkan halaman _PAGE_ dari _PAGES_",
-                    "infoEmpty": "Tidak ada data tersedia",
-                    "infoFiltered": "(difilter dari _MAX_ total data)",
-                    "paginate": {
-                        "first": "Pertama",
-                        "last": "Terakhir", 
-                        "next": "Selanjutnya",
-                        "previous": "Sebelumnya"
-                    }
-                },
+            // Konfigurasi bahasa Indonesia untuk DataTables
+            const indonesianLanguage = {
+                "emptyTable": "Tidak ada data yang tersedia pada tabel ini",
+                "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+                "infoEmpty": "Menampilkan 0 sampai 0 dari 0 data",
+                "infoFiltered": "(difilter dari _MAX_ total data)",
+                "lengthMenu": "Tampilkan _MENU_ data",
+                "loadingRecords": "Memuat...",
+                "processing": "Memproses...",
+                "search": "Cari:",
+                "zeroRecords": "Tidak ditemukan data yang sesuai",
+                "paginate": {
+                    "first": "Pertama",
+                    "last": "Terakhir",
+                    "next": "Selanjutnya",
+                    "previous": "Sebelumnya"
+                }
+            };
+
+            // Inisialisasi DataTable dengan bahasa Indonesia
+            var requestTable = $('#requestTable').DataTable({
+                processing: true,
+                serverSide: false,
+                pageLength: 10,
+                language: indonesianLanguage,
                 "order": [[3, "desc"]], // Urutkan berdasarkan tanggal (kolom ke-4) secara descending
-                "pageLength": 10,
                 "responsive": true,
                 "scrollX": true,
                 "autoWidth": false,
                 "dom": '<"top"f>rt<"bottom"lp><"clear">',
                 "columnDefs": [
-                    { "orderable": false, "targets": [0, 8] }, // Nonaktifkan pengurutan untuk kolom No dan Aksi
-                    { "searchable": false, "targets": [0, 8] } // Nonaktifkan pencarian untuk kolom No dan Aksi
+                    { 
+                        "orderable": false, 
+                        "targets": [0, 8],
+                        "data": null,
+                        "defaultContent": ""
+                    },
+                    { 
+                        "searchable": false, 
+                        "targets": [0, 8]
+                    }
+                ],
+                "columns": [
+                    { 
+                        "data": null,
+                        "render": function(data, type, row, meta) {
+                            return meta.row + 1;
+                        }
+                    }, // Kolom No
+                    { "data": "no_surat" }, // Kolom No. Surat
+                    { "data": "departemen" }, // Kolom Departemen
+                    { "data": "nama" }, // Kolom Nama Karyawan
+                    { "data": "no_telp" }, // Kolom No. Telp
+                    { 
+                        "data": "tanggal",
+                        "render": function(data, type, row) {
+                            if (type === 'display') {
+                                return moment(data, 'YYYY-MM-DD').format('DD/MM/YYYY');
+                            }
+                            return data;
+                        }
+                    }, // Kolom Tanggal
+                    { "data": "jam_out" }, // Kolom Jam Keluar
+                    { "data": "jam_in" }, // Kolom Jam Kembali
+                    { "data": "keperluan" }, // Kolom Keperluan
+                    { 
+                        "data": null,
+                        "render": function(data, type, row) {
+                            // Langsung gunakan status_badge dan status_text yang sudah dihitung dari server
+                            return `<span class="badge badge-${row.status_badge}">${row.status_text}</span>`;
+                        }
+                    }, // Kolom Status
+                    { 
+                        "data": null,
+                        "render": function(data, type, row) {
+                            let buttons = '';
+
+                            // Detail button
+                            buttons += `<button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#detailModal" 
+                                            data-no-surat="${row.no_surat}"
+                                            data-nama="${row.nama}"
+                                            data-no-telp="${row.no_telp}"
+                                            data-departemen="${row.departemen}"
+                                            data-tanggal="${row.tanggal}"
+                                            data-jam-keluar="${row.jam_out}"
+                                            data-jam-kembali="${row.jam_in}"
+                                            data-keperluan="${row.keperluan}"
+                                            data-acc-lead="${row.acc_lead}"
+                                            data-acc-hr-ga="${row.acc_hr_ga}"
+                                            data-acc-security-out="${row.acc_security_out}"
+                                            data-acc-security-in="${row.acc_security_in}"
+                                            data-id="${row.id}"
+                                            data-user-role-id="${row.user_role_id}"
+                                            data-user-role-title="${row.user_role_title}">
+                                            <i class="fas fa-eye"></i> Detail
+                                        </button>`;
+
+                            // Edit button
+                            buttons += `<button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editModal"
+                                            data-id="${row.id}"
+                                            data-no-surat="${row.no_surat}"
+                                            data-nama="${row.nama}"
+                                            data-no-telp="${row.no_telp}"
+                                            data-departemen-id="${row.departemen_id}"
+                                            data-jam-keluar="${row.jam_out}"
+                                            data-jam-kembali="${row.jam_in}"
+                                            data-keperluan="${row.keperluan}">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>`;
+
+                            // ACC button logic
+                            if (row.user_role_id == 1 || (row.user_role_id == 2 && (row.acc_lead == 1 || row.acc_lead == 3))) {
+                                buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                data-id="${row.id}"
+                                                data-role-id="${row.user_role_id}">
+                                                <i class="fas fa-check"></i> ACC
+                                            </button>`;
+                            } else if (row.user_role_id == 1 || (row.user_role_id == 3 && (row.acc_hr_ga == 1 || row.acc_hr_ga == 3) && row.acc_lead == 2)) {
+                                buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                data-id="${row.id}"
+                                                data-role-id="${row.user_role_id}">
+                                                <i class="fas fa-check"></i> ACC
+                                            </button>`;
+                            } else if (row.user_role_id == 1 || (row.user_role_id == 6 && row.acc_lead == 2 && row.acc_hr_ga == 2)) {
+                                if (row.acc_security_out == 1 || row.acc_security_out == 3) {
+                                    buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                    data-id="${row.id}"
+                                                    data-role-id="${row.user_role_id}">
+                                                    <i class="fas fa-sign-out-alt"></i> ACC Out
+                                                </button>`;
+                                } else if (row.acc_security_out == 2 && (row.acc_security_in == 1 || row.acc_security_in == 3)) {
+                                    buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                    data-id="${row.id}"
+                                                    data-role-id="${row.user_role_id}">
+                                                    <i class="fas fa-sign-in-alt"></i> ACC In
+                                                </button>`;
+                                }
+                            }
+
+                            return buttons;
+                        }
+                    } // Kolom Aksi
                 ]
             });
 
@@ -563,6 +740,7 @@
                 const role = $(this).data('role');
                 const status = $(this).data('status');
                 const requestId = $('#modal-request-id').val();
+                const modalElement = $(this).closest('.modal');
                 
                 // Remove active class from all actions in the same group
                 $(`.status-action[data-role="${role}"]`).removeClass('active');
@@ -574,12 +752,12 @@
                 updateStatusBadge(role, status);
 
                 // Update the current statuses object in modal data
-                let currentStatuses = $('#detailModal').data('currentStatuses') || {};
+                let currentStatuses = $(modalElement).data('currentStatuses') || {};
                 currentStatuses[role] = status;
-                $('#detailModal').data('currentStatuses', currentStatuses);
+                $(modalElement).data('currentStatuses', currentStatuses);
 
                 // Check and toggle save button visibility
-                checkAndToggleSaveButton();
+                checkAndToggleSaveButton(modalElement);
             });
 
             // Function to update status badge
@@ -596,9 +774,9 @@
             }
 
             // Function to check if save button should be visible
-            function checkAndToggleSaveButton() {
-                const initialStatuses = $('#detailModal').data('initialStatuses');
-                const currentStatuses = $('#detailModal').data('currentStatuses');
+            function checkAndToggleSaveButton(modalElement) {
+                const initialStatuses = $(modalElement).data('initialStatuses');
+                const currentStatuses = $(modalElement).data('currentStatuses');
                 let changesMade = false;
 
                 for (const role in initialStatuses) {
@@ -648,6 +826,8 @@
                         let errorMessage = 'Terjadi kesalahan.';
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             errorMessage = 'Terjadi kesalahan: ' + xhr.responseJSON.message;
+                        } else if (xhr.responseText) {
+                            errorMessage = 'Terjadi kesalahan: ' + xhr.responseText;
                         }
                         alert(errorMessage);
                     }
@@ -671,7 +851,9 @@
                 $('.status-action').removeClass('active');
                 
                 // Update modal content
+                $('#modal-no-surat').text(button.data('no-surat'));
                 $('#modal-nama').text(button.data('nama'));
+                $('#modal-no-telp').text(button.data('no-telp'));
                 $('#modal-departemen').text(button.data('departemen'));
                 $('#modal-tanggal').text(button.data('tanggal'));
                 $('#modal-jam-keluar').text(button.data('jam-keluar'));
@@ -718,10 +900,10 @@
                     'security-out': accSecurityOut,
                     'security-in': accSecurityIn
                 };
-                $('#detailModal').data('initialStatuses', initialStatuses);
+                $(this).data('initialStatuses', initialStatuses);
 
                 // Reset currentStatuses when modal is opened to avoid carrying over old state
-                $('#detailModal').data('currentStatuses', {});
+                $(this).data('currentStatuses', {});
 
                 // Hide all action button containers initially using the strong hidden-by-js class
                 $('#lead-actions').addClass('hidden-by-js');
@@ -736,23 +918,23 @@
                     $('#security-out-actions').removeClass('hidden-by-js');
                     $('#security-in-actions').removeClass('hidden-by-js');
                 } else if (userRoleId == 2) { // Lead (ID 2)
-                    // Lead can see their action buttons ONLY if HR/GA has NOT yet approved
-                    if (accHrGa !== 2) {
+                    // Lead can see their action buttons if their approval is pending (1) OR rejected (3) AND not rejected by any subsequent role
+                    if ((accLead === 1 || accLead === 3) && accHrGa !== 3 && accSecurityOut !== 3 && accSecurityIn !== 3) {
                         $('#lead-actions').removeClass('hidden-by-js');
                     }
                 } else if (userRoleId == 3) { // HR/GA (ID 3)
-                    // HR/GA can see their action buttons if Lead has already approved
-                    if (accLead == 2) {
+                    // HR/GA can see their action buttons if Lead has approved (2) AND HR/GA's approval is pending (1) OR rejected (3) AND not rejected by any subsequent security role
+                    if (accLead === 2 && (accHrGa === 1 || accHrGa === 3) && accSecurityOut !== 3 && accSecurityIn !== 3) {
                         $('#hr-ga-actions').removeClass('hidden-by-js');
                     }
                 } else if (userRoleId == 6) { // Security (ID 6)
-                    // Security can see their Security Out action buttons if Lead and HR/GA have approved
-                    if (accLead == 2 && accHrGa == 2) {
+                    // Security can see their Security Out action buttons if Lead and HR/GA have approved AND Security Out's approval is pending (1) OR rejected (3)
+                    if (accLead === 2 && accHrGa === 2 && (accSecurityOut === 1 || accSecurityOut === 3) && accSecurityIn !== 3) {
                         $('#security-out-actions').removeClass('hidden-by-js');
-                        // Security can see their Security In action buttons if Security Out has also approved
-                        if (accSecurityOut == 2) {
-                            $('#security-in-actions').removeClass('hidden-by-js');
-                        }
+                    }
+                    // Security can see their Security In action buttons if Security Out has approved AND Security In's approval is pending (1) OR rejected (3)
+                    else if (accLead === 2 && accHrGa === 2 && accSecurityOut === 2 && (accSecurityIn === 1 || accSecurityIn === 3)) {
+                        $('#security-in-actions').removeClass('hidden-by-js');
                     }
                 }
 
@@ -803,11 +985,11 @@
                         }
                     },
                     error: function(xhr) {
-                         let errorMessage = 'Terjadi kesalahan.';
+                        let errorMessage = 'Terjadi kesalahan.';
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             errorMessage = 'Terjadi kesalahan: ' + xhr.responseJSON.message;
                         } else if (xhr.responseText) {
-                             errorMessage = 'Terjadi kesalahan: ' + xhr.responseText;
+                            errorMessage = 'Terjadi kesalahan: ' + xhr.responseText;
                         }
                         alert(errorMessage);
                     }
@@ -823,7 +1005,9 @@
                 $('#editForm').attr('action', `/request-karyawan/${requestId}`);
                 
                 // Populate form fields
+                $('#edit_no_surat').val(button.data('no-surat'));
                 $('#edit_nama').val(button.data('nama'));
+                $('#edit_no_telp').val(button.data('no-telp'));
                 $('#edit_departemen_id').val(button.data('departemen-id'));
                 $('#edit_jam_out').val(button.data('jam-keluar'));
                 $('#edit_jam_in').val(button.data('jam-kembali'));
@@ -856,6 +1040,50 @@
                 });
             });
         });
+
+        // Fungsi untuk memuat data di tabel request karyawan
+        function loadDataKaryawan() {
+            const month = $('#filterMonthKaryawan').val();
+            const year = $('#filterYearKaryawan').val();
+            
+            $.get(`/request-karyawan/latest-requests?month=${month}&year=${year}`, function(data) {
+                // Clear dan reload data
+                var requestTable = $('#requestTable').DataTable();
+                requestTable.clear();
+                requestTable.rows.add(data).draw();
+            });
+        }
+
+        // Set bulan dan tahun saat ini sebagai default saat halaman dimuat
+        $(document).ready(function() {
+            const currentDateKaryawan = new Date();
+            $('#filterMonthKaryawan').val(currentDateKaryawan.getMonth() + 1);
+            $('#filterYearKaryawan').val(currentDateKaryawan.getFullYear());
+            loadDataKaryawan(); // Muat data awal
+        });
+
+        // Event change untuk filter bulan dan tahun
+        $('#filterMonthKaryawan, #filterYearKaryawan').change(function() {
+            loadDataKaryawan();
+        });
+
+        function previewPDFKaryawan() {
+            const month = $('#filterMonthKaryawan').val();
+            const year = $('#filterYearKaryawan').val();
+            const exportType = $('input[name="previewTypeKaryawan"]:checked').val();
+            
+            const url = `/request-karyawan/export/preview/${month}/${year}?type=${exportType}`;
+            window.open(url, '_blank');
+        }
+
+        function exportDataKaryawan(format) {
+            const month = $('#filterMonthKaryawan').val();
+            const year = $('#filterYearKaryawan').val();
+            const exportType = $(`input[name="${format}TypeKaryawan"]:checked`).val();
+            
+            const url = `/request-karyawan/export/${format}/${month}/${year}?type=${exportType}`;
+            window.location.href = url;
+        }
     </script>
 </body>
 </html>

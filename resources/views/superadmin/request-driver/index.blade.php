@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
     @include('layout.superadmin.head')
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 </head>
 <body>
     <div class="wrapper">
@@ -123,6 +124,98 @@
                             <div class="card">
                                 <div class="card-header">
                                     <div class="card-title">Daftar Permohonan Izin Keluar Driver</div>
+                                    <div class="d-flex">
+                                        <select class="form-control mr-2" id="filterMonthDriver" style="width: 150px;">
+                                            <option value="1">Januari</option>
+                                            <option value="2">Februari</option>
+                                            <option value="3">Maret</option>
+                                            <option value="4">April</option>
+                                            <option value="5">Mei</option>
+                                            <option value="6">Juni</option>
+                                            <option value="7">Juli</option>
+                                            <option value="8">Agustus</option>
+                                            <option value="9">September</option>
+                                            <option value="10">Oktober</option>
+                                            <option value="11">November</option>
+                                            <option value="12">Desember</option>
+                                        </select>
+                                        <select class="form-control mr-2" id="filterYearDriver" style="width: 100px;">
+                                            @foreach($years as $year)
+                                                <option value="{{ $year }}">{{ $year }}</option>
+                                            @endforeach
+                                        </select>
+                                        <div class="btn-group ml-2">
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                    <i class="fas fa-eye"></i> Preview
+                                                </button>
+                                                <div class="dropdown-menu p-2" style="width: 200px;">
+                                                    <div class="form-check mb-2 ml-2">
+                                                        <input class="form-check-input" type="radio" name="previewTypeDriver" id="previewFilteredDriver" value="filtered" checked>
+                                                        <label class="form-check-label" for="previewFilteredDriver">
+                                                            Data yang Ditampilkan
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check ml-2">
+                                                        <input class="form-check-input" type="radio" name="previewTypeDriver" id="previewAllDriver" value="all">
+                                                        <label class="form-check-label" for="previewAllDriver">
+                                                            Semua Data
+                                                        </label>
+                                                    </div>
+                                                    <hr class="my-2">
+                                                    <button type="button" class="btn btn-info btn-sm btn-block" onclick="previewPDFDriver()">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                    <i class="fas fa-file-pdf"></i> PDF
+                                                </button>
+                                                <div class="dropdown-menu p-2" style="width: 200px;">
+                                                    <div class="form-check mb-2 ml-2">
+                                                        <input class="form-check-input" type="radio" name="pdfTypeDriver" id="pdfFilteredDriver" value="filtered" checked>
+                                                        <label class="form-check-label" for="pdfFilteredDriver">
+                                                            Data yang Ditampilkan
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check ml-2">
+                                                        <input class="form-check-input" type="radio" name="pdfTypeDriver" id="pdfAllDriver" value="all">
+                                                        <label class="form-check-label" for="pdfAllDriver">
+                                                            Semua Data
+                                                        </label>
+                                                    </div>
+                                                    <hr class="my-2">
+                                                    <button type="button" class="btn btn-primary btn-sm btn-block" onclick="exportDataDriver('pdf')">
+                                                        <i class="fas fa-file-pdf"></i> Export PDF
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                    <i class="fas fa-file-excel"></i> Excel
+                                                </button>
+                                                <div class="dropdown-menu p-2" style="width: 200px;">
+                                                    <div class="form-check mb-2 ml-2">
+                                                        <input class="form-check-input" type="radio" name="excelTypeDriver" id="excelFilteredDriver" value="filtered" checked>
+                                                        <label class="form-check-label" for="excelFilteredDriver">
+                                                            Data yang Ditampilkan
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check ml-2">
+                                                        <input class="form-check-input" type="radio" name="excelTypeDriver" id="excelAllDriver" value="all">
+                                                        <label class="form-check-label" for="excelAllDriver">
+                                                            Semua Data
+                                                        </label>
+                                                    </div>
+                                                    <hr class="my-2">
+                                                    <button type="button" class="btn btn-success btn-sm btn-block" onclick="exportDataDriver('excel')">
+                                                        <i class="fas fa-file-excel"></i> Export Excel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
@@ -553,25 +646,32 @@
 
     <script>
         $(document).ready(function() {
-            // Inisialisasi DataTable
-            $('#requestDriverTable').DataTable({
-                "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Indonesian.json",
-                    "search": "Cari:",
-                    "lengthMenu": "Tampilkan _MENU_ data per halaman",
-                    "zeroRecords": "Tidak ada data yang ditemukan",
-                    "info": "Menampilkan halaman _PAGE_ dari _PAGES_",
-                    "infoEmpty": "Tidak ada data tersedia",
-                    "infoFiltered": "(difilter dari _MAX_ total data)",
-                    "paginate": {
-                        "first": "Pertama",
-                        "last": "Terakhir", 
-                        "next": "Selanjutnya",
-                        "previous": "Sebelumnya"
-                    }
-                },
+            // Konfigurasi bahasa Indonesia untuk DataTables
+            const indonesianLanguage = {
+                "emptyTable": "Tidak ada data yang tersedia pada tabel ini",
+                "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+                "infoEmpty": "Menampilkan 0 sampai 0 dari 0 data",
+                "infoFiltered": "(difilter dari _MAX_ total data)",
+                "lengthMenu": "Tampilkan _MENU_ data",
+                "loadingRecords": "Memuat...",
+                "processing": "Memproses...",
+                "search": "Cari:",
+                "zeroRecords": "Tidak ditemukan data yang sesuai",
+                "paginate": {
+                    "first": "Pertama",
+                    "last": "Terakhir",
+                    "next": "Selanjutnya",
+                    "previous": "Sebelumnya"
+                }
+            };
+
+            // Inisialisasi DataTable dengan bahasa Indonesia
+            var requestDriverTable = $('#requestDriverTable').DataTable({
+                processing: true,
+                serverSide: false,
+                pageLength: 10,
+                language: indonesianLanguage,
                 "order": [[5, "desc"]], // Urutkan berdasarkan tanggal (kolom ke-6) secara descending
-                "pageLength": 10,
                 "responsive": true,
                 "scrollX": true,
                 "autoWidth": false,
@@ -579,6 +679,108 @@
                 "columnDefs": [
                     { "orderable": false, "targets": [0, 10] }, // Nonaktifkan pengurutan untuk kolom No dan Aksi
                     { "searchable": false, "targets": [0, 10] } // Nonaktifkan pencarian untuk kolom No dan Aksi
+                ],
+                "columns": [
+                    { 
+                        "data": null,
+                        "render": function(data, type, row, meta) {
+                            return meta.row + 1;
+                        }
+                    }, // Kolom No
+                    { "data": "nama_ekspedisi" }, // Kolom Nama Ekspedisi
+                    { "data": "nopol_kendaraan" }, // Kolom No. Polisi
+                    { "data": "nama_driver" }, // Kolom Nama Driver
+                    { "data": "no_hp_driver" }, // Kolom No. HP Driver
+                    { 
+                        "data": "tanggal",
+                        "render": function(data, type, row) {
+                            return moment(data, 'YYYY-MM-DD').format('DD/MM/YYYY');
+                        }
+                    }, // Kolom Tanggal
+                    { "data": "jam_out" }, // Kolom Jam Keluar
+                    { "data": "jam_in" }, // Kolom Jam Kembali
+                    { "data": "keperluan" }, // Kolom Keperluan
+                    { 
+                        "data": null,
+                        "render": function(data, type, row) {
+                            return `<span class="badge badge-${row.status_badge}">${row.status_text}</span>`;
+                        }
+                    }, // Kolom Status
+                    { 
+                        "data": null,
+                        "render": function(data, type, row) {
+                            let buttons = '';
+
+                            // Detail button
+                            buttons += `<button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#detailModal" 
+                                            data-nama-ekpedisi="${row.nama_ekspedisi}"
+                                            data-nopol="${row.nopol_kendaraan}"
+                                            data-nama-driver="${row.nama_driver}"
+                                            data-no-hp-driver="${row.no_hp_driver}"
+                                            data-nama-kernet="${row.nama_kernet || '-'}"
+                                            data-no-hp-kernet="${row.no_hp_kernet || '-'}"
+                                            data-tanggal="${row.tanggal}"
+                                            data-jam-keluar="${row.jam_out}"
+                                            data-jam-kembali="${row.jam_in}"
+                                            data-keperluan="${row.keperluan}"
+                                            data-acc-admin="${row.acc_admin}"
+                                            data-acc-head-unit="${row.acc_head_unit}"
+                                            data-acc-security-out="${row.acc_security_out}"
+                                            data-acc-security-in="${row.acc_security_in}"
+                                            data-id="${row.id}"
+                                            data-user-role-id="${row.user_role_id}"
+                                            data-user-role-title="${row.user_role_title}">
+                                            <i class="fas fa-eye"></i> Detail
+                                        </button>`;
+
+                            // Edit button
+                            buttons += `<button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editModal"
+                                            data-id="${row.id}"
+                                            data-ekspedisi-id="${row.ekspedisi_id}"
+                                            data-nama-ekpedisi="${row.nama_ekspedisi}"
+                                            data-nopol="${row.nopol_kendaraan}"
+                                            data-nama-driver="${row.nama_driver}"
+                                            data-no-hp-driver="${row.no_hp_driver}"
+                                            data-nama-kernet="${row.nama_kernet || ''}"
+                                            data-no-hp-kernet="${row.no_hp_kernet || ''}"
+                                            data-jam-keluar="${row.jam_out}"
+                                            data-jam-kembali="${row.jam_in}"
+                                            data-keperluan="${row.keperluan}">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>`;
+
+                            // ACC button logic
+                            if (row.user_role_id == 1 || (row.user_role_id == 4 && row.acc_admin == 1)) {
+                                buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                data-id="${row.id}"
+                                                data-role-id="${row.user_role_id}">
+                                                <i class="fas fa-check"></i> ACC
+                                            </button>`;
+                            } else if (row.user_role_id == 1 || (row.user_role_id == 5 && row.acc_head_unit == 1 && row.acc_admin == 2)) {
+                                buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                data-id="${row.id}"
+                                                data-role-id="${row.user_role_id}">
+                                                <i class="fas fa-check"></i> ACC
+                                            </button>`;
+                            } else if (row.user_role_id == 1 || (row.user_role_id == 6 && row.acc_admin == 2 && row.acc_head_unit == 2)) {
+                                if (row.acc_security_out == 1) {
+                                    buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                    data-id="${row.id}"
+                                                    data-role-id="${row.user_role_id}">
+                                                    <i class="fas fa-sign-out-alt"></i> ACC Out
+                                                </button>`;
+                                } else if (row.acc_security_out == 2 && row.acc_security_in == 1) {
+                                    buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
+                                                    data-id="${row.id}"
+                                                    data-role-id="${row.user_role_id}">
+                                                    <i class="fas fa-sign-in-alt"></i> ACC In
+                                                </button>`;
+                                }
+                            }
+
+                            return buttons;
+                        }
+                    } // Kolom Aksi
                 ]
             });
 
@@ -752,47 +954,10 @@
                 });
             });
 
-            // Handle status checkbox changes
-            $('.status-action').click(function() {
-                const role = $(this).data('role');
-                const status = $(this).data('status');
-                const requestId = $('#modal-request-id').val();
-                
-                // Remove active class from all actions in the same group
-                $(`.status-action[data-role="${role}"]`).removeClass('active');
-                
-                // Add active class to the clicked action
-                $(this).addClass('active');
-                
-                // Update the status badge
-                updateStatusBadge(role, status);
-
-                // Update the current statuses object in modal data
-                let currentStatuses = $(this).closest('.modal').data('currentStatuses') || {};
-                currentStatuses[role] = status;
-                $(this).closest('.modal').data('currentStatuses', currentStatuses);
-
-                // Check and toggle save button visibility
-                checkAndToggleSaveButton();
-            });
-
-            // Function to update status badge
-            function updateStatusBadge(role, status) {
-                let badge = '';
-                if (status === 2) {
-                    badge = '<span class="badge badge-success">Disetujui</span>';
-                } else if (status === 3) {
-                    badge = '<span class="badge badge-danger">Ditolak</span>';
-                } else {
-                    badge = '<span class="badge badge-warning">Menunggu</span>';
-                }
-                $(`#modal-acc-${role}`).html(badge);
-            }
-
             // Function to check if save button should be visible
-            function checkAndToggleSaveButton() {
-                const initialStatuses = $(this).closest('.modal').data('initialStatuses');
-                const currentStatuses = $(this).closest('.modal').data('currentStatuses');
+            function checkAndToggleSaveButton(modalElement) {
+                const initialStatuses = $(modalElement).data('initialStatuses');
+                const currentStatuses = $(modalElement).data('currentStatuses');
                 let changesMade = false;
 
                 for (const role in initialStatuses) {
@@ -809,6 +974,44 @@
                 } else {
                     $('#saveStatusBtn').hide();
                 }
+            }
+
+            // Handle status checkbox changes
+            $('.status-action').click(function() {
+                const role = $(this).data('role');
+                const status = $(this).data('status');
+                const requestId = $('#modal-request-id').val();
+                const modalElement = $(this).closest('.modal');
+                
+                // Remove active class from all actions in the same group
+                $(`.status-action[data-role="${role}"]`).removeClass('active');
+                
+                // Add active class to the clicked action
+                $(this).addClass('active');
+                
+                // Update the status badge
+                updateStatusBadge(role, status);
+
+                // Update the current statuses object in modal data
+                let currentStatuses = $(modalElement).data('currentStatuses') || {};
+                currentStatuses[role] = status;
+                $(modalElement).data('currentStatuses', currentStatuses);
+
+                // Check and toggle save button visibility
+                checkAndToggleSaveButton(modalElement);
+            });
+
+            // Function to update status badge
+            function updateStatusBadge(role, status) {
+                let badge = '';
+                if (status === 2) {
+                    badge = '<span class="badge badge-success">Disetujui</span>';
+                } else if (status === 3) {
+                    badge = '<span class="badge badge-danger">Ditolak</span>';
+                } else {
+                    badge = '<span class="badge badge-warning">Menunggu</span>';
+                }
+                $(`#modal-acc-${role}`).html(badge);
             }
 
             // Handle save status button click
@@ -893,7 +1096,50 @@
                     }
                 });
             });
+
+            // Fungsi untuk memuat data
+            function loadDataDriver() {
+                const month = $('#filterMonthDriver').val();
+                const year = $('#filterYearDriver').val();
+                
+                $.get(`/request-driver/latest-requests?month=${month}&year=${year}`, function(data) {
+                    // Clear dan reload data
+                    requestDriverTable.clear();
+                    requestDriverTable.rows.add(data).draw();
+                });
+            }
+
+            // Set bulan dan tahun saat ini sebagai default
+            const currentDateDriver = new Date();
+            $('#filterMonthDriver').val(currentDateDriver.getMonth() + 1);
+            $('#filterYearDriver').val(currentDateDriver.getFullYear());
+
+            // Load data awal
+            loadDataDriver();
+
+            // Event change untuk filter
+            $('#filterMonthDriver, #filterYearDriver').change(function() {
+                loadDataDriver();
+            });
         });
+
+        function previewPDFDriver() {
+            const month = $('#filterMonthDriver').val();
+            const year = $('#filterYearDriver').val();
+            const exportType = $('input[name="previewTypeDriver"]:checked').val();
+            
+            const url = `/request-driver/export/preview/${month}/${year}?type=${exportType}`;
+            window.open(url, '_blank');
+        }
+
+        function exportDataDriver(format) {
+            const month = $('#filterMonthDriver').val();
+            const year = $('#filterYearDriver').val();
+            const exportType = $(`input[name="${format}TypeDriver"]:checked`).val();
+            
+            const url = `/request-driver/export/${format}/${month}/${year}?type=${exportType}`;
+            window.location.href = url;
+        }
     </script>
 </body>
 </html>

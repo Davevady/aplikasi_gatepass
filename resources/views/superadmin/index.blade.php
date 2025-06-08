@@ -251,11 +251,82 @@
                                                 <option value="11">November</option>
                                                 <option value="12">Desember</option>
                                             </select>
-                                            <select class="form-control" id="filterYear" style="width: 100px;">
+                                            <select class="form-control mr-2" id="filterYear" style="width: 100px;">
                                                 @foreach($years as $year)
                                                     <option value="{{ $year }}">{{ $year }}</option>
                                                 @endforeach
                                             </select>
+                                            <div class="btn-group ml-2">
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
+                                                    <div class="dropdown-menu p-2" style="width: 200px;">
+                                                        <div class="form-check mb-2 ml-2">
+                                                            <input class="form-check-input" type="radio" name="previewType" id="previewFiltered" value="filtered" checked>
+                                                            <label class="form-check-label" for="previewFiltered">
+                                                                Data yang Ditampilkan
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check ml-2">
+                                                            <input class="form-check-input" type="radio" name="previewType" id="previewAll" value="all">
+                                                            <label class="form-check-label" for="previewAll">
+                                                                Semua Data
+                                                            </label>
+                                                        </div>
+                                                        <hr class="my-2">
+                                                        <button type="button" class="btn btn-info btn-sm btn-block" onclick="previewPDF()">
+                                                            <i class="fas fa-eye"></i> Preview
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                        <i class="fas fa-file-pdf"></i> PDF
+                                                    </button>
+                                                    <div class="dropdown-menu p-2" style="width: 200px;">
+                                                        <div class="form-check mb-2 ml-2">
+                                                            <input class="form-check-input" type="radio" name="pdfType" id="pdfFiltered" value="filtered" checked>
+                                                            <label class="form-check-label" for="pdfFiltered">
+                                                                Data yang Ditampilkan
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check ml-2">
+                                                            <input class="form-check-input" type="radio" name="pdfType" id="pdfAll" value="all">
+                                                            <label class="form-check-label" for="pdfAll">
+                                                                Semua Data
+                                                            </label>
+                                                        </div>
+                                                        <hr class="my-2">
+                                                        <button type="button" class="btn btn-primary btn-sm btn-block" onclick="exportData('pdf')">
+                                                            <i class="fas fa-file-pdf"></i> Export PDF
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                        <i class="fas fa-file-excel"></i> Excel
+                                                    </button>
+                                                    <div class="dropdown-menu p-2" style="width: 200px;">
+                                                        <div class="form-check mb-2 ml-2">
+                                                            <input class="form-check-input" type="radio" name="excelType" id="excelFiltered" value="filtered" checked>
+                                                            <label class="form-check-label" for="excelFiltered">
+                                                                Data yang Ditampilkan
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check ml-2">
+                                                            <input class="form-check-input" type="radio" name="excelType" id="excelAll" value="all">
+                                                            <label class="form-check-label" for="excelAll">
+                                                                Semua Data
+                                                            </label>
+                                                        </div>
+                                                        <hr class="my-2">
+                                                        <button type="button" class="btn btn-success btn-sm btn-block" onclick="exportData('excel')">
+                                                            <i class="fas fa-file-excel"></i> Export Excel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -265,7 +336,9 @@
                                             <thead>
                                                 <tr>
                                                     <th>No.</th>
+                                                    <th>No Surat</th>
                                                     <th>Nama</th>
+                                                    <th>No Telp</th>
                                                     <th>Tanggal</th>
                                                     <th>Jam Keluar</th>
                                                     <th>Jam Kembali</th>
@@ -302,6 +375,7 @@
                             <thead>
                                 <tr>
                                     <th>No.</th>
+                                    <th>No Surat</th>
                                     <th>Nama</th>
                                     <th>Departemen</th>
                                     <th>Tanggal</th>
@@ -413,7 +487,9 @@
                 },
                 columns: [
                     { data: null, render: function (data, type, row, meta) { return meta.row + meta.settings._iDisplayStart + 1; } },
+                    { data: 'no_surat' },
                     { data: 'nama' },
+                    { data: 'no_telp' },
                     { data: 'tanggal' },
                     { data: 'jam_out' },
                     { data: 'jam_in' },
@@ -471,30 +547,35 @@
                     }
 
                     const ctx = document.getElementById('weeklyChart').getContext('2d');
+                    const datasetsWeekly = [];
+
+                    const currentUserRoleId = {{ auth()->user()->role_id }};
+
+                    if (currentUserRoleId != 4 && currentUserRoleId != 5) {
+                        datasetsWeekly.push({
+                            label: 'Permohonan Karyawan',
+                            data: Object.values(data.karyawan),
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                            borderColor: 'rgb(75, 192, 192)',
+                            borderWidth: 1
+                        });
+                    }
+
+                    if (currentUserRoleId != 2 && currentUserRoleId != 3) {
+                        datasetsWeekly.push({
+                            label: 'Permohonan Driver',
+                            data: Object.values(data.driver),
+                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                            borderColor: 'rgb(255, 99, 132)',
+                            borderWidth: 1
+                        });
+                    }
+
                     weeklyChart = new Chart(ctx, {
                         type: 'bar',
                         data: {
                             labels: weeks,
-                            datasets: [
-                                @if(auth()->user()->role_id != 4 && auth()->user()->role_id != 5)
-                                {
-                                    label: 'Permohonan Karyawan',
-                                    data: Object.values(data.karyawan),
-                                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                                    borderColor: 'rgb(75, 192, 192)',
-                                    borderWidth: 1
-                                },
-                                @endif
-                                @if(auth()->user()->role_id != 2 && auth()->user()->role_id != 3)
-                                {
-                                    label: 'Permohonan Driver',
-                                    data: Object.values(data.driver),
-                                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                                    borderColor: 'rgb(255, 99, 132)',
-                                    borderWidth: 1
-                                }
-                                @endif
-                            ]
+                            datasets: datasetsWeekly
                         },
                         options: {
                             responsive: true,
@@ -524,54 +605,59 @@
 
         // Grafik Permohonan Bulanan
         const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+        const monthlyDatasets = [];
+
+        const currentUserRoleIdMonthly = {{ auth()->user()->role_id }};
+
+        if (currentUserRoleIdMonthly != 4 && currentUserRoleIdMonthly != 5) {
+            monthlyDatasets.push({
+                label: 'Permohonan Karyawan',
+                data: [
+                    {{ $monthlyData['karyawan'][1] }},
+                    {{ $monthlyData['karyawan'][2] }},
+                    {{ $monthlyData['karyawan'][3] }},
+                    {{ $monthlyData['karyawan'][4] }},
+                    {{ $monthlyData['karyawan'][5] }},
+                    {{ $monthlyData['karyawan'][6] }},
+                    {{ $monthlyData['karyawan'][7] }},
+                    {{ $monthlyData['karyawan'][8] }},
+                    {{ $monthlyData['karyawan'][9] }},
+                    {{ $monthlyData['karyawan'][10] }},
+                    {{ $monthlyData['karyawan'][11] }},
+                    {{ $monthlyData['karyawan'][12] }}
+                ],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            });
+        }
+
+        if (currentUserRoleIdMonthly != 2 && currentUserRoleIdMonthly != 3) {
+            monthlyDatasets.push({
+                label: 'Permohonan Driver',
+                data: [
+                    {{ $monthlyData['driver'][1] }},
+                    {{ $monthlyData['driver'][2] }},
+                    {{ $monthlyData['driver'][3] }},
+                    {{ $monthlyData['driver'][4] }},
+                    {{ $monthlyData['driver'][5] }},
+                    {{ $monthlyData['driver'][6] }},
+                    {{ $monthlyData['driver'][7] }},
+                    {{ $monthlyData['driver'][8] }},
+                    {{ $monthlyData['driver'][9] }},
+                    {{ $monthlyData['driver'][10] }},
+                    {{ $monthlyData['driver'][11] }},
+                    {{ $monthlyData['driver'][12] }}
+                ],
+                borderColor: 'rgb(255, 99, 132)',
+                tension: 0.1
+            });
+        }
+
         const monthlyChart = new Chart(monthlyCtx, {
             type: 'line',
             data: {
                 labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-                datasets: [
-                    @if(auth()->user()->role_id != 4 && auth()->user()->role_id != 5)
-                    {
-                        label: 'Permohonan Karyawan',
-                        data: [
-                            {{ $monthlyData['karyawan'][1] }},
-                            {{ $monthlyData['karyawan'][2] }},
-                            {{ $monthlyData['karyawan'][3] }},
-                            {{ $monthlyData['karyawan'][4] }},
-                            {{ $monthlyData['karyawan'][5] }},
-                            {{ $monthlyData['karyawan'][6] }},
-                            {{ $monthlyData['karyawan'][7] }},
-                            {{ $monthlyData['karyawan'][8] }},
-                            {{ $monthlyData['karyawan'][9] }},
-                            {{ $monthlyData['karyawan'][10] }},
-                            {{ $monthlyData['karyawan'][11] }},
-                            {{ $monthlyData['karyawan'][12] }}
-                        ],
-                        borderColor: 'rgb(75, 192, 192)',
-                        tension: 0.1
-                    },
-                    @endif
-                    @if(auth()->user()->role_id != 2 && auth()->user()->role_id != 3)
-                    {
-                        label: 'Permohonan Driver',
-                        data: [
-                            {{ $monthlyData['driver'][1] }},
-                            {{ $monthlyData['driver'][2] }},
-                            {{ $monthlyData['driver'][3] }},
-                            {{ $monthlyData['driver'][4] }},
-                            {{ $monthlyData['driver'][5] }},
-                            {{ $monthlyData['driver'][6] }},
-                            {{ $monthlyData['driver'][7] }},
-                            {{ $monthlyData['driver'][8] }},
-                            {{ $monthlyData['driver'][9] }},
-                            {{ $monthlyData['driver'][10] }},
-                            {{ $monthlyData['driver'][11] }},
-                            {{ $monthlyData['driver'][12] }}
-                        ],
-                        borderColor: 'rgb(255, 99, 132)',
-                        tension: 0.1
-                    }
-                    @endif
-                ]
+                datasets: monthlyDatasets
             },
             options: {
                 responsive: true,
@@ -602,6 +688,63 @@
                 responsive: true
             }
         });
+
+        function previewPDF() {
+            const month = $('#filterMonth').val();
+            const year = $('#filterYear').val();
+            const dataType = $('#filterType').val();
+            const exportType = $('input[name="previewType"]:checked').val();
+            
+            const url = `/export/dashboard/preview/${month}/${year}/${dataType}?type=${exportType}`;
+            window.open(url, '_blank');
+        }
+
+        function exportData(format) {
+            const month = $('#filterMonth').val();
+            const year = $('#filterYear').val();
+            const dataType = $('#filterType').val();
+            const exportType = $(`input[name="${format}Type"]:checked`).val();
+            
+            const url = `/export/dashboard/${format}/${month}/${year}/${dataType}?type=${exportType}`;
+            window.location.href = url;
+        }
     </script>
+    <style>
+        /* Custom styles for the dropdown menu */
+        .btn-group .dropdown-menu {
+            min-width: 220px; /* Lebar minimum untuk dropdown */
+            border-radius: 8px; /* Sudut membulat */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Bayangan lembut */
+            padding: 15px; /* Padding lebih besar */
+            background-color: #ffffff; /* Latar belakang putih */
+        }
+
+        .btn-group .dropdown-menu .form-check {
+            margin-bottom: 10px; /* Jarak antar radio button */
+        }
+
+        .btn-group .dropdown-menu .form-check-label {
+            font-size: 1rem; /* Ukuran font label */
+            color: #333; /* Warna teks */
+            margin-left: 5px; /* Jarak antara radio dan label */
+        }
+
+        .btn-group .dropdown-menu .form-check-input[type="radio"] {
+            width: 1.1em; /* Ukuran radio button */
+            height: 1.1em; /* Ukuran radio button */
+            margin-top: 0.25em; /* Penyelarasan vertikal */
+        }
+
+        .btn-group .dropdown-menu hr {
+            border-top: 1px solid #eee; /* Garis pemisah lebih tipis */
+            margin: 10px 0; /* Margin garis */
+        }
+
+        .btn-group .dropdown-menu .btn-sm {
+            padding: 8px 15px; /* Padding tombol di dalam dropdown */
+            font-size: 0.95rem; /* Ukuran font tombol */
+            border-radius: 6px; /* Sudut membulat tombol */
+        }
+    </style>
 </body>
 </html>
