@@ -7,6 +7,9 @@ use App\Models\RequestDriver;
 use App\Models\Ekspedisi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel as ExcelFacade;
+use Barryvdh\DomPDF\Facade\Pdf as PdfFacade;
 
 class RequestDriverController extends Controller
 {
@@ -24,18 +27,18 @@ class RequestDriverController extends Controller
 
         // Ambil data permohonan driver berdasarkan role
         if ($user->role_id != 2 && $user->role_id != 3) { // Bukan role lead dan hr-ga
-            $requestDrivers = RequestDriver::get();
+            $requestDrivers = RequestDriver::with('ekspedisi')->get();
         }
         
-        // Menghitung total request berdasarkan status untuk permohonan yang terlihat oleh user
+        // Menghitung total request berdasarkan status dengan urutan persetujuan untuk permohonan yang terlihat oleh user
         $totalMenunggu = 0;
         $totalDisetujui = 0;
         $totalDitolak = 0;
         $totalRequest = 0;
 
         if ($user->role_id != 2 && $user->role_id != 3) { // Bukan role lead dan hr-ga
-             // Permohonan Menunggu Driver: Belum disetujui semua pihak DAN belum ditolak oleh siapapun DAN belum keluar security
-             $totalMenunggu = RequestDriver::where(function($query) {
+            // Permohonan Menunggu Driver: Belum disetujui semua pihak DAN belum ditolak oleh siapapun DAN belum keluar security
+            $totalMenunggu = RequestDriver::where(function($query) {
                 $query->where(function($q) {
                     $q->where('acc_admin', 1) // Admin belum menyetujui
                       ->orWhere('acc_head_unit', 1) // Head Unit belum menyetujui setelah Admin acc
@@ -45,8 +48,8 @@ class RequestDriverController extends Controller
                 ->where('acc_head_unit', '!=', 3)
                 ->where('acc_security_out', '!=', 3)
                 ->where('acc_security_in', '!=', 3);
-             })
-             ->count();
+            })
+            ->count();
                 
             // Permohonan Disetujui Driver: Sudah disetujui Admin, Head Unit, dan Security Out (baik sudah kembali atau belum)
             $totalDisetujui = RequestDriver::where('acc_admin', 2)
@@ -65,17 +68,50 @@ class RequestDriverController extends Controller
             // Total semua request driver yang terlihat oleh user
             $totalRequest = RequestDriver::count();
         }
-        
-        // Pass data to the view
+
+        // Mengambil tahun-tahun yang tersedia untuk filter
+        $years = $this->getAvailableYears();
+
         return view('superadmin.request-driver.index', compact(
-            'title', 
+            'title',
             'requestDrivers',
+            'ekspedisis',
             'totalMenunggu',
             'totalDisetujui',
             'totalDitolak',
             'totalRequest',
-            'ekspedisis' // Tambahkan ekspedisis ke view
+            'years'
         ));
+    }
+
+    /**
+     * Mengambil tahun-tahun yang tersedia untuk filter
+     * 
+     * @return array
+     */
+    private function getAvailableYears()
+    {
+        $years = [];
+        $currentYear = date('Y');
+        
+        // Ambil tahun dari data permohonan
+        $driverYears = RequestDriver::selectRaw('YEAR(created_at) as year')
+            ->distinct()
+            ->pluck('year')
+            ->toArray();
+            
+        // Gabungkan dan hapus duplikat
+        $years = array_unique($driverYears);
+        
+        // Tambahkan tahun saat ini jika belum ada
+        if (!in_array($currentYear, $years)) {
+            $years[] = $currentYear;
+        }
+        
+        // Urutkan dari yang terbaru
+        rsort($years);
+        
+        return $years;
     }
 
     /**
@@ -432,5 +468,289 @@ class RequestDriverController extends Controller
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Mengambil data permohonan terbaru dengan filter
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getLatestRequests(Request $request)
+    {
+        $month = $request->input('month', date('m'));
+        $year = $request->input('year', date('Y'));
+        $user = auth()->user();
+        $data = [];
+
+        $requests = RequestDriver::with(['ekspedisi'])
+            ->whereMonth('created_at', $month)
+            ->whereYear('created_at', $year)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($item) use ($user) {
+                $statusBadge = 'warning';
+                $text = 'Menunggu';
+                
+                // Cek jika ada yang menolak
+                if($item->acc_admin == 3) {
+                    $statusBadge = 'danger';
+                    $text = 'Ditolak Admin';
+                } 
+                elseif($item->acc_head_unit == 3) {
+                    $statusBadge = 'danger';
+                    $text = 'Ditolak Head Unit';
+                }
+                elseif($item->acc_security_out == 3) {
+                    $statusBadge = 'danger';
+                    $text = 'Ditolak Security Out';
+                } 
+                elseif($item->acc_security_in == 3) {
+                    $statusBadge = 'danger';
+                    $text = 'Ditolak Security In';
+                }
+                // Cek urutan persetujuan sesuai alur jika tidak ditolak
+                elseif($item->acc_admin == 1) {
+                    $statusBadge = 'warning';
+                    $text = 'Menunggu Admin/Checker';
+                }
+                elseif($item->acc_admin == 2 && $item->acc_head_unit == 1) {
+                    $statusBadge = 'warning';
+                    $text = 'Menunggu Head Unit';
+                }
+                // Jika sudah disetujui Admin dan Head Unit
+                elseif($item->acc_admin == 2 && $item->acc_head_unit == 2) {
+                    // Cek status security
+                    if($item->acc_security_out == 1) {
+                        // Cek status hangus (jam in sudah lewat tapi belum keluar)
+                        if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
+                            $statusBadge = 'danger';
+                            $text = 'Hangus';
+                        } else {
+                            $statusBadge = 'info';
+                            $text = 'Disetujui (Belum Keluar)';
+                        }
+                    } elseif ($item->acc_security_out == 2) {
+                        // Cek status security in
+                        if ($item->acc_security_in == 1) {
+                            // Cek status terlambat (sudah keluar tapi belum kembali)
+                            if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
+                                $statusBadge = 'warning';
+                                $text = 'Terlambat';
+                            } else {
+                                $statusBadge = 'info';
+                                $text = 'Sudah Keluar (Belum Kembali)';
+                            }
+                        } elseif ($item->acc_security_in == 2) {
+                            $statusBadge = 'success';
+                            $text = 'Sudah Kembali';
+                        }
+                    }
+                }
+
+                return [
+                    'id' => $item->id,
+                    'no_surat' => $item->no_surat ?? '-',
+                    'nama_ekspedisi' => $item->ekspedisi ? $item->ekspedisi->nama_ekspedisi : '-',
+                    'nopol_kendaraan' => $item->nopol_kendaraan,
+                    'nama_driver' => $item->nama_driver,
+                    'no_hp_driver' => $item->no_hp_driver ?? '-',
+                    'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('Y-m-d'),
+                    'jam_out' => $item->jam_out,
+                    'jam_in' => $item->jam_in,
+                    'keperluan' => $item->keperluan,
+                    'status_badge' => $statusBadge,
+                    'status_text' => $text,
+                    'acc_admin' => $item->acc_admin,
+                    'acc_head_unit' => $item->acc_head_unit,
+                    'acc_security_out' => $item->acc_security_out,
+                    'acc_security_in' => $item->acc_security_in,
+                    'user_role_id' => $user->role_id,
+                    'user_role_title' => $user->role->title ?? '',
+                ];
+            });
+
+        $data = array_merge($data, $requests->toArray());
+
+        return response()->json($data);
+    }
+
+    /**
+     * Export data permohonan driver ke PDF
+     * @param Request $request
+     * @param int $month
+     * @param int $year
+     * @return \Illuminate\Http\Response
+     */
+    public function exportPDF(Request $request, $month, $year)
+    {
+        $type = $request->input('type', 'filtered'); // 'filtered' atau 'all'
+        $query = RequestDriver::with(['ekspedisi']);
+
+        if ($type === 'filtered') {
+            $query->whereMonth('created_at', $month)
+                  ->whereYear('created_at', $year);
+        }
+
+        $requests = $query->orderBy('created_at', 'desc')->get();
+
+        $data = $requests->map(function ($item) {
+            $statusBadge = 'warning';
+            $text = 'Menunggu';
+            
+            // Cek jika ada yang menolak
+            if($item->acc_admin == 3) {
+                $statusBadge = 'danger';
+                $text = 'Ditolak Admin';
+            } 
+            elseif($item->acc_head_unit == 3) {
+                $statusBadge = 'danger';
+                $text = 'Ditolak Head Unit';
+            }
+            elseif($item->acc_security_out == 3) {
+                $statusBadge = 'danger';
+                $text = 'Ditolak Security Out';
+            } 
+            elseif($item->acc_security_in == 3) {
+                $statusBadge = 'danger';
+                $text = 'Ditolak Security In';
+            }
+            // Cek urutan persetujuan sesuai alur jika tidak ditolak
+            elseif($item->acc_admin == 1) {
+                $statusBadge = 'warning';
+                $text = 'Menunggu Admin/Checker';
+            }
+            elseif($item->acc_admin == 2 && $item->acc_head_unit == 1) {
+                $statusBadge = 'warning';
+                $text = 'Menunggu Head Unit';
+            }
+            // Jika sudah disetujui Admin dan Head Unit
+            elseif($item->acc_admin == 2 && $item->acc_head_unit == 2) {
+                // Cek status security
+                if($item->acc_security_out == 1) {
+                    // Cek status hangus (jam in sudah lewat tapi belum keluar)
+                    if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
+                        $statusBadge = 'danger';
+                        $text = 'Hangus';
+                    } else {
+                        $statusBadge = 'info';
+                        $text = 'Disetujui (Belum Keluar)';
+                    }
+                } elseif ($item->acc_security_out == 2) {
+                    // Cek status security in
+                    if ($item->acc_security_in == 1) {
+                        // Cek status terlambat (sudah keluar tapi belum kembali)
+                        if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
+                            $statusBadge = 'warning';
+                            $text = 'Terlambat';
+                        } else {
+                            $statusBadge = 'info';
+                            $text = 'Sudah Keluar (Belum Kembali)';
+                        }
+                    } elseif ($item->acc_security_in == 2) {
+                        $statusBadge = 'success';
+                        $text = 'Sudah Kembali';
+                    }
+                }
+            }
+            return [
+                'no_surat' => $item->no_surat ?? '-',
+                'nama_ekspedisi' => $item->ekspedisi ? $item->ekspedisi->nama_ekspedisi : '-',
+                'nopol_kendaraan' => $item->nopol_kendaraan,
+                'nama_driver' => $item->nama_driver,
+                'no_hp_driver' => $item->no_hp_driver ?? '-',
+                'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('Y-m-d'),
+                'jam_out' => $item->jam_out,
+                'jam_in' => $item->jam_in,
+                'keperluan' => $item->keperluan,
+                'status_text' => $text
+            ];
+        });
+
+        $pdf = PdfFacade::loadView('superadmin.exports.driver_pdf', compact('data', 'month', 'year', 'type'));
+        return $pdf->download('laporan-driver-' . ($type === 'all' ? 'all' : $month . '-' . $year) . '.pdf');
+    }
+
+    /**
+     * Export data permohonan driver ke Excel
+     * @param Request $request
+     * @param int $month
+     * @param int $year
+     * @return \Illuminate\Http\Response
+     */
+    public function exportExcel(Request $request, $month, $year)
+    {
+        $type = $request->input('type', 'filtered'); // 'filtered' atau 'all'
+        $query = RequestDriver::with(['ekspedisi']);
+
+        if ($type === 'filtered') {
+            $query->whereMonth('created_at', $month)
+                  ->whereYear('created_at', $year);
+        }
+
+        $requests = $query->orderBy('created_at', 'desc')->get();
+
+        $data = $requests->map(function ($item) {
+            $text = 'Menunggu';
+            
+            if($item->acc_admin == 3) $text = 'Ditolak Admin';
+            elseif($item->acc_head_unit == 3) $text = 'Ditolak Head Unit';
+            elseif($item->acc_security_out == 3) $text = 'Ditolak Security Out'; 
+            elseif($item->acc_security_in == 3) $text = 'Ditolak Security In';
+            elseif($item->acc_admin == 1) $text = 'Menunggu Admin/Checker';
+            elseif($item->acc_admin == 2 && $item->acc_head_unit == 1) $text = 'Menunggu Head Unit';
+            elseif($item->acc_admin == 2 && $item->acc_head_unit == 2) {
+                if($item->acc_security_out == 1) {
+                    if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
+                        $text = 'Hangus';
+                    } else {
+                        $text = 'Disetujui (Belum Keluar)';
+                    }
+                } elseif ($item->acc_security_out == 2) {
+                    if ($item->acc_security_in == 1) {
+                        if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
+                            $text = 'Terlambat';
+                        } else {
+                            $text = 'Sudah Keluar (Belum Kembali)';
+                        }
+                    } elseif ($item->acc_security_in == 2) {
+                        $text = 'Sudah Kembali';
+                    }
+                }
+            }
+            return [
+                'No Surat' => $item->no_surat ?? '-',
+                'Nama Ekspedisi' => $item->ekspedisi ? $item->ekspedisi->nama_ekspedisi : '-',
+                'No Polisi' => $item->nopol_kendaraan,
+                'Nama Driver' => $item->nama_driver,
+                'No HP Driver' => $item->no_hp_driver ?? '-',
+                'Tanggal' => \Carbon\Carbon::parse($item->created_at)->format('Y-m-d'),
+                'Jam Keluar' => $item->jam_out,
+                'Jam Kembali' => $item->jam_in,
+                'Keperluan' => $item->keperluan,
+                'Status' => $text
+            ];
+        });
+
+        return ExcelFacade::download(new class($data) implements \Maatwebsite\Excel\Concerns\FromCollection, \Maatwebsite\Excel\Concerns\WithHeadings {
+            private $data;
+
+            public function __construct($data)
+            {
+                $this->data = $data;
+            }
+
+            public function collection()
+            {
+                return collect($this->data);
+            }
+
+            public function headings(): array
+            {
+                return [
+                    'No Surat', 'Nama Ekspedisi', 'No Polisi', 'Nama Driver', 'No HP Driver', 'Tanggal', 'Jam Keluar', 'Jam Kembali', 'Keperluan', 'Status'
+                ];
+            }
+        }, 'laporan-driver-' . ($type === 'all' ? 'all' : $month . '-' . $year) . '.xlsx');
     }
 }

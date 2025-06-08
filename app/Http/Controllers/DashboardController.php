@@ -499,6 +499,7 @@ class DashboardController extends Controller
                     }
 
                     return [
+                        'no_surat' => $item->no_surat ?? '-',
                         'nama' => $item->nama,
                         'departemen' => $item->departemen->name,
                         'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
@@ -506,7 +507,8 @@ class DashboardController extends Controller
                         'jam_in' => $item->jam_in,
                         'status' => $statusBadge,
                         'text' => $text,
-                        'tipe' => 'Karyawan'
+                        'tipe' => 'Karyawan',
+                        'no_telp' => $item->no_telp ?? '-'
                     ];
                 });
 
@@ -581,6 +583,7 @@ class DashboardController extends Controller
                     }
 
                     return [
+                        'no_surat' => $item->no_surat ?? '-',
                         'nama' => $item->nama_driver,
                         'departemen' => $item->ekspedisi ? $item->ekspedisi->nama_ekspedisi : '-',
                         'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
@@ -588,7 +591,8 @@ class DashboardController extends Controller
                         'jam_in' => $item->jam_in,
                         'status' => $statusBadge,
                         'text' => $text,
-                        'tipe' => 'Driver'
+                        'tipe' => 'Driver',
+                        'no_telp' => $item->no_hp_driver ?? '-'
                     ];
                 });
 

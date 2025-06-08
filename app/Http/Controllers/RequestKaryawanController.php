@@ -7,6 +7,9 @@ use App\Models\Departemen;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class RequestKaryawanController extends Controller
 {
@@ -65,16 +68,19 @@ class RequestKaryawanController extends Controller
             // Total semua request karyawan yang terlihat oleh user
             $totalRequest = RequestKaryawan::count();
         }
-        
-        // Pass data to the view
+
+        // Mengambil tahun-tahun yang tersedia untuk filter
+        $years = $this->getAvailableYears();
+
         return view('superadmin.request-karyawan.index', compact(
-            'title', 
+            'title',
             'requestKaryawans',
+            'departemens',
             'totalMenunggu',
             'totalDisetujui',
             'totalDitolak',
             'totalRequest',
-            'departemens' // Tambahkan departemens ke view
+            'years'
         ));
     }
 
@@ -299,61 +305,42 @@ class RequestKaryawanController extends Controller
     public function updateStatus($id, Request $request)
     {
         try {
-            // Ambil data request karyawan
             $requestKaryawan = RequestKaryawan::find($id);
 
-            // Cek apakah data request karyawan ada
             if (!$requestKaryawan) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Data Request Karyawan tidak ditemukan'
+                    'message' => 'Request Karyawan tidak ditemukan.'
                 ], 404);
             }
 
-            // Update status berdasarkan input
             $statuses = $request->input('statuses');
             
-            if (isset($statuses['lead'])) {
-                $requestKaryawan->acc_lead = $statuses['lead'];
-            }
-            if (isset($statuses['hr-ga'])) {
-                $requestKaryawan->acc_hr_ga = $statuses['hr-ga'];
-            }
-            if (isset($statuses['security-out'])) {
-                $requestKaryawan->acc_security_out = $statuses['security-out'];
-            }
-            if (isset($statuses['security-in'])) {
-                $requestKaryawan->acc_security_in = $statuses['security-in'];
+            foreach ($statuses as $role => $status) {
+                // Pastikan role yang diperbarui sesuai dengan kolom di database
+                if ($role === 'lead') {
+                    $requestKaryawan->acc_lead = $status;
+                } elseif ($role === 'hr-ga') {
+                    $requestKaryawan->acc_hr_ga = $status;
+                } elseif ($role === 'security-out') {
+                    $requestKaryawan->acc_security_out = $status;
+                } elseif ($role === 'security-in') {
+                    $requestKaryawan->acc_security_in = $status;
+                }
             }
 
-            // Simpan perubahan
             $requestKaryawan->save();
-
-            // Buat notifikasi
-            $users = \App\Models\User::whereHas('role', function($query) {
-                $query->whereIn('slug', ['admin', 'lead', 'hr-ga', 'security']);
-            })->get();
-
-            foreach($users as $user) {
-                Notification::create([
-                    'user_id' => $user->id,
-                    'title' => 'Update Status Permohonan Izin',
-                    'message' => 'Status permohonan izin atas nama ' . $requestKaryawan->nama . 
-                               ' telah diperbarui',
-                    'type' => 'karyawan',
-                    'status' => 'pending',
-                    'is_read' => false
-                ]);
-            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Status berhasil diperbarui'
+                'message' => 'Status permohonan berhasil diperbarui.'
             ]);
+
         } catch (\Exception $e) {
+            Log::error('Error updating status for RequestKaryawan: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan saat memperbarui status: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -420,5 +407,273 @@ class RequestKaryawanController extends Controller
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Mengambil data permohonan karyawan untuk ekspor
+     * 
+     * @param int $month
+     * @param int $year
+     * @param string $type
+     * @param string $exportType
+     * @return array
+     */
+    private function getDataForExport($month, $year, $type, $exportType)
+    {
+        $query = RequestKaryawan::with(['departemen']);
+
+        if ($exportType === 'filtered') {
+            $query->whereMonth('created_at', $month)
+                  ->whereYear('created_at', $year);
+        }
+
+        $requests = $query->orderBy('created_at', 'desc')
+                          ->get()
+                          ->map(function ($item) {
+                                $statusBadge = 'warning';
+                                $text = 'Menunggu';
+                                
+                                if($item->acc_lead == 3) {
+                                    $statusBadge = 'danger';
+                                    $text = 'Ditolak Lead';
+                                } 
+                                elseif($item->acc_hr_ga == 3) {
+                                    $statusBadge = 'danger';
+                                    $text = 'Ditolak HR GA';
+                                }
+                                elseif($item->acc_security_out == 3) {
+                                    $statusBadge = 'danger';
+                                    $text = 'Ditolak Security Out';
+                                } 
+                                elseif($item->acc_security_in == 3) {
+                                    $statusBadge = 'danger';
+                                    $text = 'Ditolak Security In';
+                                }
+                                elseif($item->acc_lead == 1) {
+                                    $statusBadge = 'warning';
+                                    $text = 'Menunggu Lead';
+                                }
+                                elseif($item->acc_lead == 2 && $item->acc_hr_ga == 1) {
+                                    $statusBadge = 'warning';
+                                    $text = 'Menunggu HR GA';
+                                }
+                                elseif($item->acc_lead == 2 && $item->acc_hr_ga == 2) {
+                                    if($item->acc_security_out == 1) {
+                                        if (Carbon::parse($item->jam_in)->isPast()) {
+                                            $statusBadge = 'danger';
+                                            $text = 'Hangus';
+                                        } else {
+                                            $statusBadge = 'info';
+                                            $text = 'Menunggu Security Keluar';
+                                        }
+                                    } elseif ($item->acc_security_out == 2) {
+                                        if ($item->acc_security_in == 1) {
+                                            if (Carbon::parse($item->jam_in)->isPast()) {
+                                                $statusBadge = 'warning';
+                                                $text = 'Terlambat';
+                                            } else {
+                                                $statusBadge = 'info';
+                                                $text = 'Menunggu Security Masuk';
+                                            }
+                                        } elseif ($item->acc_security_in == 2) {
+                                            $statusBadge = 'success';
+                                            $text = 'Sudah Kembali';
+                                        }
+                                    }
+                                }
+
+                                return [
+                                    'no_surat' => $item->no_surat ?? '-',
+                                    'nama' => $item->nama ?? '-',
+                                    'no_telp' => $item->no_telp ?? '-',
+                                    'departemen' => $item->departemen->name ?? '-',
+                                    'keperluan' => $item->keperluan ?? '-',
+                                    'tanggal' => Carbon::parse($item->created_at)->format('Y-m-d'),
+                                    'jam_out' => $item->jam_out ?? '-',
+                                    'jam_in' => $item->jam_in ?? '-',
+                                    'status' => $statusBadge,
+                                    'text' => $text,
+                                    'tipe' => 'Karyawan'
+                                ];
+                            });
+
+        // Filter berdasarkan tipe jika bukan 'all'
+        if ($type !== 'all') {
+            $requests = $requests->filter(function($item) use ($type) {
+                return $item['tipe'] === $type;
+            });
+        }
+
+        return $requests->values()->all(); // Reset array keys
+    }
+
+    /**
+     * Export data permohonan karyawan ke PDF
+     * 
+     * @param int $month
+     * @param int $year
+     * @param string $type
+     * @return \Illuminate\Http\Response
+     */
+    public function exportPDF($month, $year, $type = 'all')
+    {
+        $exportType = request()->query('type', 'filtered');
+        $data = $this->getDataForExport($month, $year, $type, $exportType);
+        $pdf = PDF::loadView('exports.request-karyawan', compact('data', 'month', 'year', 'type'));
+        return $pdf->download('laporan_karyawan.pdf');
+    }
+
+    /**
+     * Export data permohonan karyawan ke Excel
+     * 
+     * @param int $month
+     * @param int $year
+     * @param string $type
+     * @return \Illuminate\Http\Response
+     */
+    public function exportExcel($month, $year, $type = 'all')
+    {
+        $exportType = request()->query('type', 'filtered');
+        $data = $this->getDataForExport($month, $year, $type, $exportType);
+        
+        return Excel::download(new \App\Exports\RequestKaryawanExport($data), 'laporan_karyawan.xlsx');
+    }
+
+    /**
+     * Mengambil tahun-tahun yang tersedia untuk filter
+     * 
+     * @return array
+     */
+    private function getAvailableYears()
+    {
+        $years = [];
+        $currentYear = date('Y');
+        
+        // Ambil tahun dari data permohonan
+        $karyawanYears = RequestKaryawan::selectRaw('YEAR(created_at) as year')
+            ->distinct()
+            ->pluck('year')
+            ->toArray();
+            
+        // Gabungkan dan hapus duplikat
+        $years = array_unique($karyawanYears);
+        
+        // Tambahkan tahun saat ini jika belum ada
+        if (!in_array($currentYear, $years)) {
+            $years[] = $currentYear;
+        }
+        
+        // Urutkan dari yang terbaru
+        rsort($years);
+        
+        return $years;
+    }
+
+    /**
+     * Mengambil data permohonan terbaru dengan filter
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getLatestRequests(Request $request)
+    {
+        $month = $request->input('month', date('m'));
+        $year = $request->input('year', date('Y'));
+        $user = auth()->user();
+        $data = [];
+
+        if ($user->role_id != 4 && $user->role_id != 5) {
+            $requests = RequestKaryawan::with(['departemen'])
+                ->whereMonth('created_at', $month)
+                ->whereYear('created_at', $year)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($item) use ($user) {
+                    $statusBadge = 'warning';
+                    $text = 'Menunggu';
+                    
+                    // Cek jika ada yang menolak
+                    if($item->acc_lead == 3) {
+                        $statusBadge = 'danger';
+                        $text = 'Ditolak Lead';
+                    } 
+                    elseif($item->acc_hr_ga == 3) {
+                        $statusBadge = 'danger';
+                        $text = 'Ditolak HR GA';
+                    }
+                    elseif($item->acc_security_out == 3) {
+                        $statusBadge = 'danger';
+                        $text = 'Ditolak Security Out';
+                    } 
+                    elseif($item->acc_security_in == 3) {
+                        $statusBadge = 'danger';
+                        $text = 'Ditolak Security In';
+                    }
+                    // Cek urutan persetujuan sesuai alur jika tidak ditolak
+                    elseif($item->acc_lead == 1) {
+                        $statusBadge = 'warning';
+                        $text = 'Menunggu Lead';
+                    }
+                    elseif($item->acc_lead == 2 && $item->acc_hr_ga == 1) {
+                        $statusBadge = 'warning';
+                        $text = 'Menunggu HR GA';
+                    }
+                    // Jika sudah disetujui Lead dan HR GA
+                    elseif($item->acc_lead == 2 && $item->acc_hr_ga == 2) {
+                        // Cek status security
+                        if($item->acc_security_out == 1) {
+                            // Cek status hangus (jam in sudah lewat tapi belum keluar)
+                            if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
+                                $statusBadge = 'danger';
+                                $text = 'Hangus';
+                            } else {
+                                $statusBadge = 'info';
+                                $text = 'Menunggu Security Keluar';
+                            }
+                        } elseif ($item->acc_security_out == 2) {
+                            // Cek status security in
+                            if ($item->acc_security_in == 1) {
+                                // Cek status terlambat (sudah keluar tapi belum kembali)
+                                if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
+                                    $statusBadge = 'warning';
+                                    $text = 'Terlambat';
+                                } else {
+                                    $statusBadge = 'info';
+                                    $text = 'Menunggu Security Masuk';
+                                }
+                            } elseif ($item->acc_security_in == 2) {
+                                $statusBadge = 'success';
+                                $text = 'Sudah Kembali';
+                            }
+                        }
+                    }
+
+                    return [
+                        'id' => $item->id,
+                        'no_surat' => $item->no_surat ?? '-',
+                        'nama' => $item->nama,
+                        'departemen' => $item->departemen->name,
+                        'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('Y-m-d'),
+                        'jam_out' => $item->jam_out,
+                        'jam_in' => $item->jam_in,
+                        'keperluan' => $item->keperluan,
+                        'status_badge' => $statusBadge,
+                        'status_text' => $text,
+                        'tipe' => 'Karyawan',
+                        'no_telp' => $item->no_telp ?? '-',
+                        'acc_lead' => $item->acc_lead,
+                        'acc_hr_ga' => $item->acc_hr_ga,
+                        'acc_security_out' => $item->acc_security_out,
+                        'acc_security_in' => $item->acc_security_in,
+                        'user_role_id' => $user->role_id,
+                        'user_role_title' => $user->role->title ?? '',
+                        'departemen_id' => $item->departemen_id,
+                    ];
+                });
+
+            $data = array_merge($data, $requests->toArray());
+        }
+
+        return response()->json($data);
     }
 }
