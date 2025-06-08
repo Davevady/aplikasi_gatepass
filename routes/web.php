@@ -11,6 +11,7 @@ use App\Http\Controllers\EkspedisiController;
 use App\Http\Controllers\ExportController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\WhatsAppController;
 
 /*
 |--------------------------------------------------------------------------
@@ -103,4 +104,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/export/dashboard/preview/{month}/{year}/{type?}', [ExportController::class, 'previewPDF'])->name('export.dashboard.preview');
     Route::get('/export/dashboard/pdf/{month}/{year}/{type?}', [ExportController::class, 'exportPDF'])->name('export.dashboard.pdf');
     Route::get('/export/dashboard/excel/{month}/{year}/{type?}', [ExportController::class, 'exportExcel'])->name('export.dashboard.excel');
+
+    // WhatsApp routes
+    Route::get('/admin/whatsapp', [WhatsAppController::class, 'index'])->name('whatsapp.index');
+    Route::get('/admin/whatsapp/status', [WhatsAppController::class, 'getStatus'])->name('whatsapp.status');
+    Route::get('/admin/whatsapp/qr', [WhatsAppController::class, 'getQR'])->name('whatsapp.qr');
 });

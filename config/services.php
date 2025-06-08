@@ -31,4 +31,15 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // 'whatsapp' => [
+    //     'api_key' => env('WHATSAPP_API_KEY'),
+    //     'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+    //     'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
+    //     'base_url' => env('WHATSAPP_BASE_URL', 'https://api.whatsapp.com/send'),
+    // ],
+
+    'fonnte' => [
+        'token' => env('FONNTE_TOKEN'),
+    ],
+
 ];

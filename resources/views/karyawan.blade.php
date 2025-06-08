@@ -158,6 +158,19 @@
                                     @enderror
                                 </div>
                                 <div class="mb-3">
+                                    <label for="no_telp" class="form-label">Nomor Telepon <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                        <input type="text" class="form-control @error('no_telp') is-invalid @enderror" 
+                                               id="no_telp" name="no_telp" value="{{ old('no_telp') }}" required
+                                               placeholder="Contoh: 081234567890">
+                                    </div>
+                                    <small class="text-muted">Masukkan nomor telepon aktif untuk notifikasi WhatsApp.</small>
+                                    @error('no_telp')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="mb-3">
                                     <label for="departemen_id" class="form-label">Departemen <span class="text-danger">*</span></label>
                                     <select class="form-select @error('departemen_id') is-invalid @enderror" 
                                             id="departemen_id" name="departemen_id" required>
@@ -278,6 +291,21 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Format nomor telepon
+            const noTelpInput = document.getElementById('no_telp');
+            noTelpInput.addEventListener('input', function(e) {
+                // Hapus semua karakter non-angka
+                let value = e.target.value.replace(/\D/g, '');
+                
+                // Batasi panjang nomor
+                if (value.length > 15) {
+                    value = value.slice(0, 15);
+                }
+                
+                // Update nilai input
+                e.target.value = value;
+            });
+
             const jamOutHour = document.getElementById('jam_out_hour');
             const jamOutMinute = document.getElementById('jam_out_minute');
             const jamInHour = document.getElementById('jam_in_hour');
