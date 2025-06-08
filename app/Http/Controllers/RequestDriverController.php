@@ -668,7 +668,7 @@ class RequestDriverController extends Controller
         });
 
         $pdf = PdfFacade::loadView('superadmin.exports.driver_pdf', compact('data', 'month', 'year', 'type'));
-        return $pdf->download('laporan-driver-' . ($type === 'all' ? 'all' : $month . '-' . $year) . '.pdf');
+        return $pdf->stream('laporan-driver-' . ($type === 'all' ? 'all' : $month . '-' . $year) . '.pdf');
     }
 
     /**

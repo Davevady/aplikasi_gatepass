@@ -520,7 +520,7 @@ class RequestKaryawanController extends Controller
         $exportType = request()->query('type', 'filtered');
         $data = $this->getDataForExport($month, $year, $type, $exportType);
         $pdf = PDF::loadView('exports.request-karyawan', compact('data', 'month', 'year', 'type'));
-        return $pdf->download('laporan_karyawan.pdf');
+        return $pdf->stream('laporan_karyawan.pdf');
     }
 
     /**
