@@ -255,7 +255,7 @@
                                         </select>
                                         <span class="input-group-text">WIB</span>
                                     </div>
-                                    <small class="text-muted">Pilih jam kembali ke area kerja (format 24 jam, maksimal 1 jam dari jam keluar).</small>
+                                    <small class="text-muted">Pilih jam kembali ke area kerja (format 24 jam).</small>
                                     <div id="selisih_waktu" class="text-muted small mt-1"></div>
                                     @error('jam_in')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -350,13 +350,6 @@
                     jamInMinute.value = '';
                     return false;
                 }
-                
-                if (selisih > 60) {
-                    selisihWaktu.innerHTML = '<span class="text-danger">Selisih waktu tidak boleh lebih dari 1 jam!</span>';
-                    jamInHour.value = '';
-                    jamInMinute.value = '';
-                    return false;
-                }
 
                 selisihWaktu.innerHTML = `<span class="text-success">Durasi izin: ${selisih} menit</span>`;
                 return true;
@@ -368,7 +361,6 @@
 
                 const outHour = parseInt(jamOutHour.value);
                 const outMinute = parseInt(jamOutMinute.value);
-                const maxHour = outHour + 1;
 
                 // Reset jam masuk
                 jamInHour.value = '';
@@ -378,7 +370,7 @@
                 Array.from(jamInHour.options).forEach(option => {
                     if (option.value) {
                         const hour = parseInt(option.value);
-                        option.disabled = hour < outHour || hour > maxHour;
+                        option.disabled = hour < outHour;
                     }
                 });
 
