@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -232,7 +233,8 @@ class UserController extends Controller
                 // Upload foto jika ada
                 if ($request->hasFile('photo')) {
                     $photo = $request->file('photo');
-                    $photoName = time() . '.' . $photo->extension();
+                    $extension = $photo->getClientOriginalExtension();
+                    $photoName = Str::slug($request->name) . '_' . time() . '.' . $extension;
                     $photo->move(public_path('images/users'), $photoName);
                     $user->photo = 'images/users/' . $photoName;
                 }
@@ -314,7 +316,8 @@ class UserController extends Controller
                 }
                 
                 $photo = $request->file('photo');
-                $photoName = time() . '.' . $photo->extension();
+                $extension = $photo->getClientOriginalExtension();
+                $photoName = Str::slug($request->name) . '_' . time() . '.' . $extension;
                 $photo->move(public_path('images/users'), $photoName);
                 $data['photo'] = 'images/users/' . $photoName;
             }
@@ -558,7 +561,8 @@ class UserController extends Controller
 
             // Upload foto baru
             $photo = $request->file('photo');
-            $photoName = time() . '.' . $photo->extension();
+            $extension = $photo->getClientOriginalExtension();
+            $photoName = Str::slug($user->name) . '_' . time() . '.' . $extension;
             $photo->move(public_path('images/users'), $photoName);
             
             $user->photo = 'images/users/' . $photoName;
