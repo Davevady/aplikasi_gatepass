@@ -6,6 +6,7 @@ use App\Models\RequestDriver;
 use App\Models\RequestKaryawan;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -18,6 +19,7 @@ class DashboardController extends Controller
     {
         $title = 'Dashboard';
         $user = auth()->user();
+        Log::debug('User Role ID: ' . $user->role_id . ' - User Departemen ID: ' . $user->departemen_id . ' - User Departemen Name: ' . ($user->departemen ? $user->departemen->name : 'N/A'));
         
         // Menghitung total request karyawan berdasarkan status persetujuan
         $totalKaryawanMenunggu = 0;
@@ -25,9 +27,29 @@ class DashboardController extends Controller
         $totalKaryawanDitolak = 0;
         $totalKaryawanRequest = 0;
 
-        if ($user->role_id != 4 && $user->role_id != 5) { // Bukan role checker dan head unit
-            // Permohonan Menunggu Karyawan: Belum disetujui semua pihak DAN belum ditolak oleh siapapun DAN belum keluar security
-            $totalKaryawanMenunggu = RequestKaryawan::where(function($query) {
+        // Query dasar untuk karyawan
+        $karyawanQuery = RequestKaryawan::query();
+        
+        // Filter berdasarkan role dan departemen
+        if ($user->role_id == 2) { // Role Lead
+            Log::debug('Applying Lead filter for departemen_id: ' . $user->departemen_id);
+            $karyawanQuery->where('departemen_id', $user->departemen_id);
+        } elseif ($user->role_id == 3) { // Role HR GA
+            Log::debug('Applying HR GA filter (excluding Admin and HR)');
+            $karyawanQuery->whereIn('departemen_id', function($query) {
+                $query->select('id')
+                    ->from('departemens')
+                    ->whereNotIn('id', [1, 2]); // Kecuali departemen Admin dan HR
+            });
+        } elseif ($user->role_id == 4 || $user->role_id == 5) { // Role Checker dan Head Unit
+            Log::debug('Applying Checker/Head Unit filter (no karyawan data)');
+            $karyawanQuery->whereRaw('1 = 0'); // Query yang selalu false
+        }
+
+        // Menghitung statistik hanya jika user memiliki akses
+        if ($user->role_id != 4 && $user->role_id != 5) {
+            // Permohonan Menunggu Karyawan
+            $totalKaryawanMenunggu = (clone $karyawanQuery)->where(function($query) {
                 $query->where(function($q) {
                     $q->where('acc_lead', 1) // Lead belum menyetujui
                       ->orWhere('acc_hr_ga', 1) // HR GA belum menyetujui setelah Lead acc
@@ -40,22 +62,22 @@ class DashboardController extends Controller
             })
             ->count();
                 
-            // Permohonan Disetujui Karyawan: Sudah disetujui Lead, HR GA, dan Security Out (baik sudah kembali atau belum)
-            $totalKaryawanDisetujui = RequestKaryawan::where('acc_lead', 2)
+            // Permohonan Disetujui Karyawan
+            $totalKaryawanDisetujui = (clone $karyawanQuery)->where('acc_lead', 2)
                 ->where('acc_hr_ga', 2)
                 ->where('acc_security_out', 2)
                 ->count();
                 
-            // Permohonan Ditolak Karyawan: Ditolak oleh salah satu pihak
-            $totalKaryawanDitolak = RequestKaryawan::where(function($query) {
+            // Permohonan Ditolak Karyawan
+            $totalKaryawanDitolak = (clone $karyawanQuery)->where(function($query) {
                 $query->where('acc_lead', 3) // Lead menolak
                     ->orWhere('acc_hr_ga', 3) // HR GA menolak
                     ->orWhere('acc_security_out', 3) // Security Out menolak
                     ->orWhere('acc_security_in', 3); // Security In menolak
             })->count();
                 
-            // Total semua request karyawan yang terlihat oleh user
-            $totalKaryawanRequest = RequestKaryawan::count();
+            // Total semua request karyawan
+            $totalKaryawanRequest = $karyawanQuery->count();
         }
 
         // Menghitung total request driver berdasarkan status persetujuan
@@ -64,9 +86,19 @@ class DashboardController extends Controller
         $totalDriverDitolak = 0;
         $totalDriverRequest = 0;
 
-        if ($user->role_id != 2 && $user->role_id != 3) { // Bukan role lead dan hr-ga
-             // Permohonan Menunggu Driver: Belum disetujui semua pihak DAN belum ditolak oleh siapapun DAN belum keluar security
-             $totalDriverMenunggu = RequestDriver::where(function($query) {
+        // Query dasar untuk driver
+        $driverQuery = RequestDriver::query();
+
+        // Filter berdasarkan role
+        if ($user->role_id == 2 || $user->role_id == 3) { // Role Lead dan HR GA
+            // Lead dan HR GA tidak bisa melihat data driver
+            $driverQuery->whereRaw('1 = 0'); // Query yang selalu false
+        }
+
+        // Menghitung statistik driver hanya jika user memiliki akses
+        if ($user->role_id != 2 && $user->role_id != 3) {
+            // Permohonan Menunggu Driver
+            $totalDriverMenunggu = (clone $driverQuery)->where(function($query) {
                 $query->where(function($q) {
                     $q->where('acc_admin', 1) // Admin belum menyetujui
                       ->orWhere('acc_head_unit', 1) // Head Unit belum menyetujui setelah Admin acc
@@ -76,25 +108,25 @@ class DashboardController extends Controller
                 ->where('acc_head_unit', '!=', 3)
                 ->where('acc_security_out', '!=', 3)
                 ->where('acc_security_in', '!=', 3);
-             })
-             ->count();
+            })
+            ->count();
                 
-            // Permohonan Disetujui Driver: Sudah disetujui Admin, Head Unit, dan Security Out (baik sudah kembali atau belum)
-            $totalDriverDisetujui = RequestDriver::where('acc_admin', 2)
+            // Permohonan Disetujui Driver
+            $totalDriverDisetujui = (clone $driverQuery)->where('acc_admin', 2)
                 ->where('acc_head_unit', 2)
                 ->where('acc_security_out', 2)
                 ->count();
                 
-            // Permohonan Ditolak Driver: Ditolak oleh salah satu pihak
-            $totalDriverDitolak = RequestDriver::where(function($query) {
+            // Permohonan Ditolak Driver
+            $totalDriverDitolak = (clone $driverQuery)->where(function($query) {
                 $query->where('acc_admin', 3) // Admin menolak
                     ->orWhere('acc_head_unit', 3) // Head Unit menolak
                     ->orWhere('acc_security_out', 3) // Security Out menolak
                     ->orWhere('acc_security_in', 3); // Security In menolak
             })->count();
                 
-            // Total semua request driver yang terlihat oleh user
-            $totalDriverRequest = RequestDriver::count();
+            // Total semua request driver
+            $totalDriverRequest = $driverQuery->count();
         }
 
         // Menghitung total keseluruhan request yang terlihat oleh user
@@ -108,7 +140,8 @@ class DashboardController extends Controller
         // Mengambil semua permohonan karyawan dengan relasi departemen
         $karyawanRequests = collect(); // Initialize as empty collection
         if ($user->role_id != 4 && $user->role_id != 5) { // Bukan role checker dan head unit
-            $karyawanRequests = RequestKaryawan::with(['departemen'])
+            $karyawanRequests = (clone $karyawanQuery)
+                ->with(['departemen'])
                 ->orderBy('created_at', 'desc')
                 ->get();
         }
@@ -116,7 +149,8 @@ class DashboardController extends Controller
         // Mengambil semua permohonan driver
         $driverRequests = collect(); // Initialize as empty collection
         if ($user->role_id != 2 && $user->role_id != 3) { // Bukan role lead dan hr-ga
-            $driverRequests = RequestDriver::with('ekspedisi')
+            $driverRequests = (clone $driverQuery)
+                ->with('ekspedisi')
                 ->orderBy('created_at', 'desc')
                 ->get();
         }
@@ -126,6 +160,12 @@ class DashboardController extends Controller
 
         // Mengambil tahun-tahun yang tersedia untuk filter
         $years = $this->getAvailableYears();
+
+        // Mengambil data departemen untuk lead
+        $departemen = null;
+        if ($user->role_id == 2) {
+            $departemen = \App\Models\Departemen::find($user->departemen_id);
+        }
 
         return view('superadmin.index', compact(
             'title',
@@ -138,7 +178,8 @@ class DashboardController extends Controller
             'karyawanRequests',
             'driverRequests',
             'monthlyData',
-            'years'
+            'years',
+            'departemen'
         ));
     }
 
@@ -153,24 +194,48 @@ class DashboardController extends Controller
         $user = auth()->user();
         $monthlyData = [];
 
+        // Query dasar untuk karyawan
+        $karyawanQuery = RequestKaryawan::query();
+        
+        // Filter berdasarkan role dan departemen
+        if ($user->role_id == 2) { // Role Lead
+            // Lead hanya bisa melihat data dari departemennya sendiri
+            $karyawanQuery->where('departemen_id', $user->departemen_id);
+        } elseif ($user->role_id == 3) { // Role HR GA
+            // HR GA bisa melihat semua departemen kecuali Admin dan HR
+            $karyawanQuery->whereIn('departemen_id', function($query) {
+                $query->select('id')
+                    ->from('departemens')
+                    ->whereNotIn('id', [1, 2]); // Kecuali departemen Admin dan HR
+            });
+        } elseif ($user->role_id == 4 || $user->role_id == 5) { // Role Checker dan Head Unit
+            // Checker dan Head Unit tidak bisa melihat data karyawan
+            $karyawanQuery->whereRaw('1 = 0'); // Query yang selalu false
+        }
+
         // Mengambil data statistik karyawan per bulan
         for ($i = 1; $i <= 12; $i++) {
-            $monthlyData['karyawan'][$i] = RequestKaryawan::when($user->role_id != 4 && $user->role_id != 5, function($query) {
-                return $query;
-            })
-            ->whereYear('created_at', $currentYear)
-            ->whereMonth('created_at', $i)
-            ->count();
+            $monthlyData['karyawan'][$i] = (clone $karyawanQuery)
+                ->whereYear('created_at', $currentYear)
+                ->whereMonth('created_at', $i)
+                ->count();
+        }
+
+        // Query dasar untuk driver
+        $driverQuery = RequestDriver::query();
+
+        // Filter berdasarkan role
+        if ($user->role_id == 2 || $user->role_id == 3) { // Role Lead dan HR GA
+            // Lead dan HR GA tidak bisa melihat data driver
+            $driverQuery->whereRaw('1 = 0'); // Query yang selalu false
         }
 
         // Mengambil data statistik driver per bulan
         for ($i = 1; $i <= 12; $i++) {
-            $monthlyData['driver'][$i] = RequestDriver::when($user->role_id != 2 && $user->role_id != 3, function($query) {
-                return $query;
-            })
-            ->whereYear('created_at', $currentYear)
-            ->whereMonth('created_at', $i)
-            ->count();
+            $monthlyData['driver'][$i] = (clone $driverQuery)
+                ->whereYear('created_at', $currentYear)
+                ->whereMonth('created_at', $i)
+                ->count();
         }
 
         return $monthlyData;
@@ -185,17 +250,46 @@ class DashboardController extends Controller
     public function getWeeklyData($month)
     {
         $year = date('Y');
+        $user = auth()->user();
         $data = [
             'karyawan' => [],
             'driver' => []
         ];
+
+        // Query dasar untuk karyawan
+        $karyawanQuery = RequestKaryawan::query();
+        
+        // Filter berdasarkan role dan departemen
+        if ($user->role_id == 2) { // Role Lead
+            // Lead hanya bisa melihat data dari departemennya sendiri
+            $karyawanQuery->where('departemen_id', $user->departemen_id);
+        } elseif ($user->role_id == 3) { // Role HR GA
+            // HR GA bisa melihat semua departemen kecuali Admin dan HR
+            $karyawanQuery->whereIn('departemen_id', function($query) {
+                $query->select('id')
+                    ->from('departemens')
+                    ->whereNotIn('id', [1, 2]); // Kecuali departemen Admin dan HR
+            });
+        } elseif ($user->role_id == 4 || $user->role_id == 5) { // Role Checker dan Head Unit
+            // Checker dan Head Unit tidak bisa melihat data karyawan
+            $karyawanQuery->whereRaw('1 = 0'); // Query yang selalu false
+        }
+
+        // Query dasar untuk driver
+        $driverQuery = RequestDriver::query();
+
+        // Filter berdasarkan role
+        if ($user->role_id == 2 || $user->role_id == 3) { // Role Lead dan HR GA
+            // Lead dan HR GA tidak bisa melihat data driver
+            $driverQuery->whereRaw('1 = 0'); // Query yang selalu false
+        }
 
         // Mendapatkan jumlah minggu dalam bulan tersebut
         $firstDay = Carbon::create($year, $month, 1);
         $lastDay = $firstDay->copy()->endOfMonth();
         $totalWeeks = ceil($lastDay->day / 7);
 
-        // Mengambil data per minggu untuk karyawan
+        // Mengambil data per minggu untuk karyawan dan driver
         for ($week = 1; $week <= $totalWeeks; $week++) {
             $startDate = $firstDay->copy()->addDays(($week - 1) * 7);
             $endDate = $startDate->copy()->addDays(6);
@@ -204,8 +298,13 @@ class DashboardController extends Controller
                 $endDate = $lastDay;
             }
 
-            $data['karyawan'][$week] = RequestKaryawan::whereBetween('created_at', [$startDate, $endDate])->count();
-            $data['driver'][$week] = RequestDriver::whereBetween('created_at', [$startDate, $endDate])->count();
+            $data['karyawan'][$week] = (clone $karyawanQuery)
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->count();
+                
+            $data['driver'][$week] = (clone $driverQuery)
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->count();
         }
 
         return response()->json($data);
@@ -222,191 +321,199 @@ class DashboardController extends Controller
         $data = [];
         $user = auth()->user();
         
+        // Query dasar untuk karyawan
+        $karyawanQuery = RequestKaryawan::query();
+        
+        // Filter berdasarkan role dan departemen untuk karyawan
+        if ($user->role_id == 2) { // Role Lead
+            $karyawanQuery->where('departemen_id', $user->departemen_id);
+        } elseif ($user->role_id == 3) { // Role HR GA
+            $karyawanQuery->whereIn('departemen_id', function($query) {
+                $query->select('id')
+                    ->from('departemens')
+                    ->whereNotIn('id', [1, 2]);
+            });
+        } elseif ($user->role_id == 4 || $user->role_id == 5) { // Role Checker dan Head Unit
+            $karyawanQuery->whereRaw('1 = 0');
+        }
+
+        // Query dasar untuk driver
+        $driverQuery = RequestDriver::query();
+
+        // Filter berdasarkan role untuk driver
+        if ($user->role_id == 2 || $user->role_id == 3) { // Role Lead dan HR GA
+            $driverQuery->whereRaw('1 = 0');
+        }
+
         if ($status === 'disetujui') {
-            // Data karyawan yang disetujui (sudah acc Security Out)
-            if ($user->role_id != 4 && $user->role_id != 5) { // Bukan role checker dan head unit
-                $karyawanDisetujui = RequestKaryawan::with('departemen')
-                    ->where('acc_lead', 2)
-                    ->where('acc_hr_ga', 2)
-                    ->where('acc_security_out', 2)
-                    ->get()
-                    ->map(function ($item) {
-                        // Logika status detail untuk karyawan
-                        $statusBadge = 'success';
-                        $text = 'Sudah Kembali'; // Default jika semua acc
+            // Data karyawan yang disetujui
+            $karyawanDisetujui = (clone $karyawanQuery)->with('departemen')
+                ->where('acc_lead', 2)
+                ->where('acc_hr_ga', 2)
+                ->where('acc_security_out', 2)
+                ->get()
+                ->map(function ($item) {
+                    // Logika status detail untuk karyawan
+                    $statusBadge = 'success';
+                    $text = 'Sudah Kembali'; // Default jika semua acc
 
-                        if ($item->acc_security_in == 1) {
-                            $statusBadge = 'info';
-                            $text = 'Sudah Keluar (Belum Kembali)';
-                        }
-                        
-                        return [
-                            'nama' => $item->nama,
-                            'departemen' => $item->departemen->name,
-                            'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
-                            'jam_out' => $item->jam_out,
-                            'jam_in' => $item->jam_in,
-                            'tipe' => 'Karyawan',
-                            'status' => $statusBadge,
-                            'text' => $text
-                        ];
-                    });
-                $data = $karyawanDisetujui;
-            }
+                    if ($item->acc_security_in == 1) {
+                        $statusBadge = 'info';
+                        $text = 'Sudah Keluar (Belum Kembali)';
+                    }
+                    
+                    return [
+                        'nama' => $item->nama,
+                        'departemen' => $item->departemen->name,
+                        'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
+                        'jam_out' => $item->jam_out,
+                        'jam_in' => $item->jam_in,
+                        'tipe' => 'Karyawan',
+                        'status' => $statusBadge,
+                        'text' => $text
+                    ];
+                });
+            $data = $karyawanDisetujui;
 
-            // Data driver yang disetujui (sudah acc Security Out)
-            if ($user->role_id != 2 && $user->role_id != 3) { // Bukan role lead dan hr-ga
-                $driverDisetujui = RequestDriver::where('acc_admin', 2)
-                    ->where('acc_head_unit', 2)
-                    ->where('acc_security_out', 2)
-                    ->get()
-                    ->map(function ($item) {
-                         // Logika status detail untuk driver
-                        $statusBadge = 'success';
-                        $text = 'Sudah Kembali'; // Default jika semua acc
+            // Data driver yang disetujui
+            $driverDisetujui = (clone $driverQuery)->where('acc_admin', 2)
+                ->where('acc_head_unit', 2)
+                ->where('acc_security_out', 2)
+                ->get()
+                ->map(function ($item) {
+                     // Logika status detail untuk driver
+                    $statusBadge = 'success';
+                    $text = 'Sudah Kembali'; // Default jika semua acc
 
-                        if ($item->acc_security_in == 1) {
-                            $statusBadge = 'info';
-                            $text = 'Sudah Keluar (Belum Kembali)';
-                        }
+                    if ($item->acc_security_in == 1) {
+                        $statusBadge = 'info';
+                        $text = 'Sudah Keluar (Belum Kembali)';
+                    }
 
-                        return [
-                            'nama' => $item->nama_driver,
-                            'departemen' => '-',
-                            'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
-                            'jam_out' => $item->jam_out,
-                            'jam_in' => $item->jam_in,
-                            'tipe' => 'Driver',
-                            'status' => $statusBadge,
-                            'text' => $text
-                        ];
-                    });
-                $data = collect($data)->concat($driverDisetujui);
-            }
+                    return [
+                        'nama' => $item->nama_driver,
+                        'departemen' => '-',
+                        'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
+                        'jam_out' => $item->jam_out,
+                        'jam_in' => $item->jam_in,
+                        'tipe' => 'Driver',
+                        'status' => $statusBadge,
+                        'text' => $text
+                    ];
+                });
+            $data = collect($data)->concat($driverDisetujui);
         } else if ($status === 'ditolak') {
             // Data karyawan yang ditolak
-            if ($user->role_id != 4 && $user->role_id != 5) { // Bukan role checker dan head unit
-                $karyawanDitolak = RequestKaryawan::with('departemen')
-                    ->where(function($query) {
-                        $query->where('acc_lead', 3)
-                            ->orWhere('acc_hr_ga', 3)
-                            ->orWhere('acc_security_out', 3)
-                            ->orWhere('acc_security_in', 3);
-                    })
-                    ->get()
-                    ->map(function ($item) {
-                        // Logika status detail untuk karyawan
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak';
-                        if($item->acc_lead == 3) $text = 'Ditolak Lead';
-                        elseif($item->acc_hr_ga == 3) $text = 'Ditolak HR GA';
-                        // security out/in ditolak juga bisa ditambahkan jika perlu
+            $karyawanDitolak = (clone $karyawanQuery)->with('departemen')
+                ->where(function($query) {
+                    $query->where('acc_lead', 3)
+                        ->orWhere('acc_hr_ga', 3)
+                        ->orWhere('acc_security_out', 3)
+                        ->orWhere('acc_security_in', 3);
+                })
+                ->get()
+                ->map(function ($item) {
+                    // Logika status detail untuk karyawan
+                    $statusBadge = 'danger';
+                    $text = 'Ditolak';
+                    if($item->acc_lead == 3) $text = 'Ditolak Lead';
+                    elseif($item->acc_hr_ga == 3) $text = 'Ditolak HR GA';
 
-                        return [
-                            'nama' => $item->nama,
-                            'departemen' => $item->departemen->name,
-                            'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
-                            'jam_out' => $item->jam_out,
-                            'jam_in' => $item->jam_in,
-                            'tipe' => 'Karyawan',
-                            'status' => $statusBadge,
-                            'text' => $text
-                        ];
-                    });
-                $data = $karyawanDitolak;
-            }
+                    return [
+                        'nama' => $item->nama,
+                        'departemen' => $item->departemen->name,
+                        'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
+                        'jam_out' => $item->jam_out,
+                        'jam_in' => $item->jam_in,
+                        'tipe' => 'Karyawan',
+                        'status' => $statusBadge,
+                        'text' => $text
+                    ];
+                });
+            $data = $karyawanDitolak;
 
             // Data driver yang ditolak
-            if ($user->role_id != 2 && $user->role_id != 3) { // Bukan role lead dan hr-ga
-                $driverDitolak = RequestDriver::where(function($query) {
-                        $query->where('acc_admin', 3)
-                            ->orWhere('acc_head_unit', 3)
-                            ->orWhere('acc_security_out', 3)
-                            ->orWhere('acc_security_in', 3);
-                    })
-                    ->get()
-                    ->map(function ($item) {
-                         // Logika status detail untuk driver
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak';
-                        if($item->acc_admin == 3) $text = 'Ditolak Admin';
-                        elseif($item->acc_head_unit == 3) $text = 'Ditolak Head Unit';
-                        // security out/in ditolak juga bisa ditambahkan jika perlu
+            $driverDitolak = (clone $driverQuery)->where(function($query) {
+                    $query->where('acc_admin', 3)
+                        ->orWhere('acc_head_unit', 3)
+                        ->orWhere('acc_security_out', 3)
+                        ->orWhere('acc_security_in', 3);
+                })
+                ->get()
+                ->map(function ($item) {
+                     // Logika status detail untuk driver
+                    $statusBadge = 'danger';
+                    $text = 'Ditolak';
+                    if($item->acc_admin == 3) $text = 'Ditolak Admin';
+                    elseif($item->acc_head_unit == 3) $text = 'Ditolak Head Unit';
 
-                        return [
-                            'nama' => $item->nama_driver,
-                            'departemen' => '-',
-                            'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
-                            'jam_out' => $item->jam_out,
-                            'jam_in' => $item->jam_in,
-                            'tipe' => 'Driver',
-                            'status' => $statusBadge,
-                            'text' => $text
-                        ];
-                    });
-                $data = collect($data)->concat($driverDitolak);
-            }
+                    return [
+                        'nama' => $item->nama_driver,
+                        'departemen' => '-',
+                        'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
+                        'jam_out' => $item->jam_out,
+                        'jam_in' => $item->jam_in,
+                        'tipe' => 'Driver',
+                        'status' => $statusBadge,
+                        'text' => $text
+                    ];
+                });
+            $data = collect($data)->concat($driverDitolak);
         } else if ($status === 'menunggu') {
-            // Data karyawan yang sedang menunggu (belum disetujui Security Out dan belum ditolak)
-            if ($user->role_id != 4 && $user->role_id != 5) { // Bukan role checker dan head unit
-                $karyawanMenunggu = RequestKaryawan::with('departemen')
-                    ->where('acc_security_out', 1) // Belum disetujui security out
-                    ->where('acc_lead', '!=', 3)
-                    ->where('acc_hr_ga', '!=', 3)
-                    ->where('acc_security_out', '!=', 3)
-                    ->where('acc_security_in', '!=', 3)
-                    ->get()
-                    ->map(function ($item) {
-                        // Logika status detail untuk karyawan
-                        $statusBadge = 'warning';
-                        $text = 'Menunggu';
-                        if($item->acc_lead == 1) $text = 'Menunggu Lead';
-                        elseif($item->acc_lead == 2 && $item->acc_hr_ga == 1) $text = 'Menunggu HR GA';
-                        elseif($item->acc_lead == 2 && $item->acc_hr_ga == 2 && $item->acc_security_out == 1) $text = 'Disetujui (Belum Keluar)'; // Ini seharusnya tidak masuk kategori menunggu di sini, tapi di getLatestRequests
+            // Data karyawan yang sedang menunggu
+            $karyawanMenunggu = (clone $karyawanQuery)->with('departemen')
+                ->where('acc_security_out', 1) // Belum disetujui security out
+                ->where('acc_lead', '!=', 3)
+                ->where('acc_hr_ga', '!=', 3)
+                ->where('acc_security_out', '!=', 3)
+                ->where('acc_security_in', '!=', 3)
+                ->get()
+                ->map(function ($item) {
+                    // Logika status detail untuk karyawan
+                    $statusBadge = 'warning';
+                    $text = 'Menunggu';
+                    if($item->acc_lead == 1) $text = 'Menunggu Lead';
+                    elseif($item->acc_lead == 2 && $item->acc_hr_ga == 1) $text = 'Menunggu HR GA';
 
-                        return [
-                            'nama' => $item->nama,
-                            'departemen' => $item->departemen->name,
-                            'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
-                            'jam_out' => $item->jam_out,
-                            'jam_in' => $item->jam_in,
-                            'tipe' => 'Karyawan',
-                            'status' => $statusBadge,
-                            'text' => $text
-                        ];
-                    });
-                $data = $karyawanMenunggu;
-            }
+                    return [
+                        'nama' => $item->nama,
+                        'departemen' => $item->departemen->name,
+                        'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
+                        'jam_out' => $item->jam_out,
+                        'jam_in' => $item->jam_in,
+                        'tipe' => 'Karyawan',
+                        'status' => $statusBadge,
+                        'text' => $text
+                    ];
+                });
+            $data = $karyawanMenunggu;
 
-            // Data driver yang sedang menunggu (belum disetujui Security Out dan belum ditolak)
-            if ($user->role_id != 2 && $user->role_id != 3) { // Bukan role lead dan hr-ga
-                $driverMenunggu = RequestDriver::where('acc_security_out', 1) // Belum disetujui security out
-                    ->where('acc_admin', '!=', 3)
-                    ->where('acc_head_unit', '!=', 3)
-                    ->where('acc_security_out', '!=', 3)
-                    ->where('acc_security_in', '!=', 3)
-                    ->get()
-                    ->map(function ($item) {
-                         // Logika status detail untuk driver
-                        $statusBadge = 'warning';
-                        $text = 'Menunggu';
-                        if($item->acc_admin == 1) $text = 'Menunggu Admin/Checker';
-                        elseif($item->acc_admin == 2 && $item->acc_head_unit == 1) $text = 'Menunggu Head Unit';
-                         elseif($item->acc_admin == 2 && $item->acc_head_unit == 2 && $item->acc_security_out == 1) $text = 'Disetujui (Belum Keluar)'; // Ini seharusnya tidak masuk kategori menunggu di sini, tapi di getLatestRequests
+            // Data driver yang sedang menunggu
+            $driverMenunggu = (clone $driverQuery)->where('acc_security_out', 1) // Belum disetujui security out
+                ->where('acc_admin', '!=', 3)
+                ->where('acc_head_unit', '!=', 3)
+                ->where('acc_security_out', '!=', 3)
+                ->where('acc_security_in', '!=', 3)
+                ->get()
+                ->map(function ($item) {
+                     // Logika status detail untuk driver
+                    $statusBadge = 'warning';
+                    $text = 'Menunggu';
+                    if($item->acc_admin == 1) $text = 'Menunggu Admin/Checker';
+                    elseif($item->acc_admin == 2 && $item->acc_head_unit == 1) $text = 'Menunggu Head Unit';
 
-                        return [
-                            'nama' => $item->nama_driver,
-                            'departemen' => '-',
-                            'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
-                            'jam_out' => $item->jam_out,
-                            'jam_in' => $item->jam_in,
-                            'tipe' => 'Driver',
-                            'status' => $statusBadge,
-                            'text' => $text
-                        ];
-                    });
-                $data = collect($data)->concat($driverMenunggu);
-            }
+                    return [
+                        'nama' => $item->nama_driver,
+                        'departemen' => '-',
+                        'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
+                        'jam_out' => $item->jam_out,
+                        'jam_in' => $item->jam_in,
+                        'tipe' => 'Driver',
+                        'status' => $statusBadge,
+                        'text' => $text
+                    ];
+                });
+            $data = collect($data)->concat($driverMenunggu);
         }
 
         // Urutkan berdasarkan tanggal terbaru
@@ -428,96 +535,134 @@ class DashboardController extends Controller
     {
         $month = $request->input('month', date('m'));
         $year = $request->input('year', date('Y'));
+        $dataType = $request->input('dataType', 'all'); // Ambil parameter dataType
         $data = [];
         $user = auth()->user();
+        Log::debug('User Role ID: ' . $user->role_id . ' - User Departemen ID: ' . $user->departemen_id . ' - User Departemen Name: ' . ($user->departemen ? $user->departemen->name : 'N/A'));
+        
+        // Query dasar untuk karyawan
+        $karyawanQuery = RequestKaryawan::query();
+        
+        // Filter berdasarkan role dan departemen untuk karyawan
+        if ($user->role_id == 2) { // Role Lead
+            Log::debug('Applying Lead filter for departemen_id: ' . $user->departemen_id);
+            $karyawanQuery->where('departemen_id', $user->departemen_id);
+        } elseif ($user->role_id == 3) { // Role HR GA
+            Log::debug('Applying HR GA filter (excluding Admin and HR)');
+            $karyawanQuery->whereIn('departemen_id', function($query) {
+                $query->select('id')
+                    ->from('departemens')
+                    ->whereNotIn('id', [1, 2]);
+            });
+        } elseif ($user->role_id == 4 || $user->role_id == 5) { // Role Checker dan Head Unit
+            Log::debug('Applying Checker/Head Unit filter (no karyawan data)');
+            $karyawanQuery->whereRaw('1 = 0');
+        }
 
-        // Data karyawan
-        if ($user->role_id != 4 && $user->role_id != 5) {
-            $karyawanRequests = RequestKaryawan::with(['departemen'])
+        // Query dasar untuk driver
+        $driverQuery = RequestDriver::query();
+
+        // Filter berdasarkan role untuk driver
+        if ($user->role_id == 2 || $user->role_id == 3) { // Role Lead dan HR GA
+            $driverQuery->whereRaw('1 = 0');
+        }
+
+        // Data karyawan (hanya jika dataType adalah 'all' atau 'Karyawan')
+        if ($dataType === 'all' || $dataType === 'Karyawan') {
+            $requests = (clone $karyawanQuery)->with(['departemen'])
                 ->whereMonth('created_at', $month)
                 ->whereYear('created_at', $year)
                 ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(function ($item) {
+                ->get();
+            // Add debug log here before mapping
+            Log::debug('Fetched Karyawan Requests (before map/filter): ' . $requests->count() . ' items');
+
+            $karyawanRequests = $requests->map(function ($item) use ($user) {
+                Log::debug('Processing Karyawan Item ID: ' . $item->id . ' - Departemen ID: ' . $item->departemen_id . ' - Departemen Name: ' . $item->departemen->name);
+                $statusBadge = 'warning';
+                $text = 'Menunggu';
+                
+                // Cek jika ada yang menolak
+                if($item->acc_lead == 3) {
+                    $statusBadge = 'danger';
+                    $text = 'Ditolak Lead';
+                } 
+                elseif($item->acc_hr_ga == 3) {
+                    $statusBadge = 'danger';
+                    $text = 'Ditolak HR GA';
+                }
+                 elseif($item->acc_security_out == 3) {
+                    $statusBadge = 'danger';
+                    $text = 'Ditolak Security Out';
+                } 
+                 elseif($item->acc_security_in == 3) {
+                    $statusBadge = 'danger';
+                    $text = 'Ditolak Security In';
+                }
+                // Cek urutan persetujuan sesuai alur jika tidak ditolak
+                elseif($item->acc_lead == 1) {
                     $statusBadge = 'warning';
-                    $text = 'Menunggu';
-                    
-                    // Cek jika ada yang menolak
-                    if($item->acc_lead == 3) {
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak Lead';
-                    } 
-                    elseif($item->acc_hr_ga == 3) {
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak HR GA';
-                    }
-                     elseif($item->acc_security_out == 3) {
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak Security Out';
-                    } 
-                     elseif($item->acc_security_in == 3) {
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak Security In';
-                    }
-                    // Cek urutan persetujuan sesuai alur jika tidak ditolak
-                    elseif($item->acc_lead == 1) {
-                        $statusBadge = 'warning';
-                        $text = 'Menunggu Lead';
-                    }
-                    elseif($item->acc_lead == 2 && $item->acc_hr_ga == 1) {
-                        $statusBadge = 'warning';
-                        $text = 'Menunggu HR GA';
-                    }
-                     // Jika sudah disetujui Lead dan HR GA
-                    elseif($item->acc_lead == 2 && $item->acc_hr_ga == 2) {
-                        // Cek status security
-                        if($item->acc_security_out == 1) {
-                             // Cek status hangus (jam in sudah lewat tapi belum keluar)
+                    $text = 'Menunggu Lead';
+                }
+                elseif($item->acc_lead == 2 && $item->acc_hr_ga == 1) {
+                    $statusBadge = 'warning';
+                    $text = 'Menunggu HR GA';
+                }
+                 // Jika sudah disetujui Lead dan HR GA
+                elseif($item->acc_lead == 2 && $item->acc_hr_ga == 2) {
+                    // Cek status security
+                    if($item->acc_security_out == 1) {
+                         // Cek status hangus (jam in sudah lewat tapi belum keluar)
+                        if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
+                            $statusBadge = 'danger';
+                            $text = 'Hangus';
+                        } else {
+                            $statusBadge = 'info';
+                            $text = 'Disetujui (Belum Keluar)';
+                        }
+                    } elseif ($item->acc_security_out == 2) {
+                        // Cek status security in
+                        if ($item->acc_security_in == 1) {
+                            // Cek status terlambat (sudah keluar tapi belum kembali)
                             if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
-                                $statusBadge = 'danger';
-                                $text = 'Hangus';
+                                $statusBadge = 'warning';
+                                $text = 'Terlambat';
                             } else {
                                 $statusBadge = 'info';
-                                $text = 'Disetujui (Belum Keluar)';
+                                $text = 'Sudah Keluar (Belum Kembali)';
                             }
-                        } elseif ($item->acc_security_out == 2) {
-                            // Cek status security in
-                            if ($item->acc_security_in == 1) {
-                                // Cek status terlambat (sudah keluar tapi belum kembali)
-                                if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
-                                    $statusBadge = 'warning';
-                                    $text = 'Terlambat';
-                                } else {
-                                    $statusBadge = 'info';
-                                    $text = 'Sudah Keluar (Belum Kembali)';
-                                }
-                            } elseif ($item->acc_security_in == 2) {
-                                $statusBadge = 'success';
-                                $text = 'Sudah Kembali';
-                            }
+                        } elseif ($item->acc_security_in == 2) {
+                            $statusBadge = 'success';
+                            $text = 'Sudah Kembali';
                         }
                     }
+                }
 
-                    return [
-                        'no_surat' => $item->no_surat ?? '-',
-                        'nama' => $item->nama,
-                        'departemen' => $item->departemen->name,
-                        'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
-                        'jam_out' => $item->jam_out,
-                        'jam_in' => $item->jam_in,
-                        'status' => $statusBadge,
-                        'text' => $text,
-                        'tipe' => 'Karyawan',
-                        'no_telp' => $item->no_telp ?? '-'
-                    ];
-                });
+                if ($user->role_id == 2 && $item->departemen_id != $user->departemen_id) {
+                    Log::debug('Skipping item for Lead (departemen mismatch): ' . $item->id . ' - Item Departemen ID: ' . $item->departemen_id . ' vs User Departemen ID: ' . $user->departemen_id);
+                    return null;
+                }
+
+                return [
+                    'no_surat' => $item->no_surat ?? '-',
+                    'nama' => $item->nama,
+                    'departemen' => $item->departemen->name,
+                    'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
+                    'jam_out' => $item->jam_out,
+                    'jam_in' => $item->jam_in,
+                    'status' => $statusBadge,
+                    'text' => $text,
+                    'tipe' => 'Karyawan',
+                    'no_telp' => $item->no_telp ?? '-'
+                ];
+            });
 
             $data = array_merge($data, $karyawanRequests->toArray());
         }
 
-        // Data driver
-        if ($user->role_id != 2 && $user->role_id != 3) {
-            $driverRequests = RequestDriver::with(['ekspedisi'])
+        // Data driver (hanya jika dataType adalah 'all' atau 'Driver')
+        if ($dataType === 'all' || $dataType === 'Driver') {
+            $driverRequests = (clone $driverQuery)->with(['ekspedisi'])
                 ->whereMonth('created_at', $month)
                 ->whereYear('created_at', $year)
                 ->orderBy('created_at', 'desc')

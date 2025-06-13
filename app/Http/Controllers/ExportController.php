@@ -57,73 +57,43 @@ class ExportController extends Controller
         $user = auth()->user();
         $data = [];
 
-        // Data karyawan
-        if ($user->role_id != 4 && $user->role_id != 5) {
-            $query = RequestKaryawan::with(['departemen']);
-            
-            // Jika exportType adalah 'filtered', tambahkan filter bulan dan tahun
-            if ($exportType === 'filtered') {
-                $query->whereMonth('created_at', $month)
-                      ->whereYear('created_at', $year);
-            }
-            
-            $karyawanRequests = $query->orderBy('created_at', 'desc')
+        // Query dasar untuk karyawan
+        $karyawanQuery = RequestKaryawan::query();
+        
+        // Filter berdasarkan role dan departemen untuk karyawan
+        if ($user->role_id == 2) { // Role Lead
+            $karyawanQuery->where('departemen_id', $user->departemen_id);
+        } elseif ($user->role_id == 3) { // Role HR GA
+            $karyawanQuery->whereIn('departemen_id', function($query) {
+                $query->select('id')
+                    ->from('departemens')
+                    ->whereNotIn('id', [1, 2]);
+            });
+        } elseif ($user->role_id == 4 || $user->role_id == 5) { // Role Checker dan Head Unit
+            $karyawanQuery->whereRaw('1 = 0');
+        }
+
+        // Query dasar untuk driver
+        $driverQuery = RequestDriver::query();
+
+        // Filter berdasarkan role untuk driver
+        if ($user->role_id == 2 || $user->role_id == 3) { // Role Lead dan HR GA
+            $driverQuery->whereRaw('1 = 0');
+        }
+
+        // Terapkan filter bulan dan tahun jika exportType adalah 'filtered'
+        if ($exportType === 'filtered') {
+            $karyawanQuery->whereMonth('created_at', $month)->whereYear('created_at', $year);
+            $driverQuery->whereMonth('created_at', $month)->whereYear('created_at', $year);
+        }
+
+        // Data karyawan (hanya jika dataType adalah 'all' atau 'Karyawan')
+        if ($type === 'all' || $type === 'Karyawan') {
+            $karyawanRequests = (clone $karyawanQuery)->with(['departemen'])
+                ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($item) {
-                    $statusBadge = 'warning';
-                    $text = 'Menunggu';
-                    
-                    // Cek jika ada yang menolak
-                    if($item->acc_lead == 3) {
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak Lead';
-                    } 
-                    elseif($item->acc_hr_ga == 3) {
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak HR GA';
-                    }
-                    elseif($item->acc_security_out == 3) {
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak Security Out';
-                    } 
-                    elseif($item->acc_security_in == 3) {
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak Security In';
-                    }
-                    // Cek urutan persetujuan sesuai alur jika tidak ditolak
-                    elseif($item->acc_lead == 1) {
-                        $statusBadge = 'warning';
-                        $text = 'Menunggu Lead';
-                    }
-                    elseif($item->acc_lead == 2 && $item->acc_hr_ga == 1) {
-                        $statusBadge = 'warning';
-                        $text = 'Menunggu HR GA';
-                    }
-                    elseif($item->acc_lead == 2 && $item->acc_hr_ga == 2) {
-                        if($item->acc_security_out == 1) {
-                            if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
-                                $statusBadge = 'danger';
-                                $text = 'Hangus';
-                            } else {
-                                $statusBadge = 'info';
-                                $text = 'Disetujui (Belum Keluar)';
-                            }
-                        } elseif ($item->acc_security_out == 2) {
-                            if ($item->acc_security_in == 1) {
-                                if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
-                                    $statusBadge = 'warning';
-                                    $text = 'Terlambat';
-                                } else {
-                                    $statusBadge = 'info';
-                                    $text = 'Sudah Keluar (Belum Kembali)';
-                                }
-                            } elseif ($item->acc_security_in == 2) {
-                                $statusBadge = 'success';
-                                $text = 'Sudah Kembali';
-                            }
-                        }
-                    }
-
+                    $status = $this->getStatus($item);
                     return [
                         'no_surat' => $item->no_surat ?? '-',
                         'nama' => $item->nama ?? '-',
@@ -133,8 +103,8 @@ class ExportController extends Controller
                         'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
                         'jam_out' => $item->jam_out ?? '-',
                         'jam_in' => $item->jam_in ?? '-',
-                        'status' => $statusBadge,
-                        'text' => $text,
+                        'status' => $status['statusBadge'],
+                        'text' => $status['text'],
                         'tipe' => 'Karyawan',
                         'nopol_kendaraan' => '-',
                         'nama_kernet' => '-',
@@ -146,71 +116,13 @@ class ExportController extends Controller
             $data = array_merge($data, $karyawanRequests->toArray());
         }
 
-        // Data driver
-        if ($user->role_id != 2 && $user->role_id != 3) {
-            $query = RequestDriver::with(['ekspedisi']);
-            
-            // Jika exportType adalah 'filtered', tambahkan filter bulan dan tahun
-            if ($exportType === 'filtered') {
-                $query->whereMonth('created_at', $month)
-                      ->whereYear('created_at', $year);
-            }
-            
-            $driverRequests = $query->orderBy('created_at', 'desc')
+        // Data driver (hanya jika dataType adalah 'all' atau 'Driver')
+        if ($type === 'all' || $type === 'Driver') {
+            $driverRequests = (clone $driverQuery)->with(['ekspedisi'])
+                ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($item) {
-                    $statusBadge = 'warning';
-                    $text = 'Menunggu';
-                    
-                    if($item->acc_admin == 3) {
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak Admin';
-                    } 
-                    elseif($item->acc_head_unit == 3) {
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak Head Unit';
-                    }
-                    elseif($item->acc_security_out == 3) {
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak Security Out';
-                    } 
-                    elseif($item->acc_security_in == 3) {
-                        $statusBadge = 'danger';
-                        $text = 'Ditolak Security In';
-                    }
-                    elseif($item->acc_admin == 1) {
-                        $statusBadge = 'warning';
-                        $text = 'Menunggu Admin/Checker';
-                    }
-                    elseif($item->acc_admin == 2 && $item->acc_head_unit == 1) {
-                        $statusBadge = 'warning';
-                        $text = 'Menunggu Head Unit';
-                    }
-                    elseif($item->acc_admin == 2 && $item->acc_head_unit == 2) {
-                        if($item->acc_security_out == 1) {
-                            if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
-                                $statusBadge = 'danger';
-                                $text = 'Hangus';
-                            } else {
-                                $statusBadge = 'info';
-                                $text = 'Disetujui (Belum Keluar)';
-                            }
-                        } elseif ($item->acc_security_out == 2) {
-                            if ($item->acc_security_in == 1) {
-                                if (\Carbon\Carbon::parse($item->jam_in)->isPast()) {
-                                    $statusBadge = 'warning';
-                                    $text = 'Terlambat';
-                                } else {
-                                    $statusBadge = 'info';
-                                    $text = 'Sudah Keluar (Belum Kembali)';
-                                }
-                            } elseif ($item->acc_security_in == 2) {
-                                $statusBadge = 'success';
-                                $text = 'Sudah Kembali';
-                            }
-                        }
-                    }
-
+                    $status = $this->getStatus($item);
                     return [
                         'no_surat' => $item->no_surat ?? '-',
                         'nama' => $item->nama_driver ?? '-',
@@ -220,8 +132,8 @@ class ExportController extends Controller
                         'tanggal' => \Carbon\Carbon::parse($item->created_at)->format('d M Y'),
                         'jam_out' => $item->jam_out ?? '-',
                         'jam_in' => $item->jam_in ?? '-',
-                        'status' => $statusBadge,
-                        'text' => $text,
+                        'status' => $status['statusBadge'],
+                        'text' => $status['text'],
                         'tipe' => 'Driver',
                         'nopol_kendaraan' => $item->nopol_kendaraan ?? '-',
                         'nama_kernet' => $item->nama_kernet ?? '-',
@@ -233,15 +145,10 @@ class ExportController extends Controller
             $data = array_merge($data, $driverRequests->toArray());
         }
 
-        // Filter berdasarkan tipe jika bukan 'all'
-        if ($type !== 'all') {
-            $data = array_filter($data, function($item) use ($type) {
-                return $item['tipe'] === $type;
-            });
-        }
-
-        // Reset array keys
-        $data = array_values($data);
+        // Urutkan berdasarkan tanggal terbaru
+        usort($data, function($a, $b) {
+            return strtotime($b['tanggal']) - strtotime($a['tanggal']);
+        });
 
         return $data;
     }
@@ -250,8 +157,11 @@ class ExportController extends Controller
     {
         $statusBadge = 'warning';
         $text = 'Menunggu';
-        
-        if ($item instanceof RequestKaryawan) {
+
+        // Check if it's a Karyawan or Driver request by checking properties
+        // For Karyawan
+        if (isset($item->acc_lead)) {
+            // Cek jika ada yang menolak
             if($item->acc_lead == 3) {
                 $statusBadge = 'danger';
                 $text = 'Ditolak Lead';
@@ -268,6 +178,7 @@ class ExportController extends Controller
                 $statusBadge = 'danger';
                 $text = 'Ditolak Security In';
             }
+            // Cek urutan persetujuan sesuai alur jika tidak ditolak
             elseif($item->acc_lead == 1) {
                 $statusBadge = 'warning';
                 $text = 'Menunggu Lead';
@@ -300,7 +211,9 @@ class ExportController extends Controller
                     }
                 }
             }
-        } else {
+        }
+        // For Driver
+        elseif (isset($item->acc_admin)) {
             if($item->acc_admin == 3) {
                 $statusBadge = 'danger';
                 $text = 'Ditolak Admin';
@@ -350,10 +263,6 @@ class ExportController extends Controller
                 }
             }
         }
-
-        return [
-            'badge' => $statusBadge,
-            'text' => $text
-        ];
+        return ['statusBadge' => $statusBadge, 'text' => $text];
     }
 } 

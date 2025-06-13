@@ -308,12 +308,13 @@
                                                                     <span class="badge badge-{{ $status }}">{{ $text }}</span>
                                                                 </td>
                                                                 <td>
-                                                                    <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#detailModal" 
+                                                                    <button type="button" class="btn btn-sm btn-info mr-1" data-toggle="modal" data-target="#detailModal"
+                                                                            data-id="{{ $request->id }}"
                                                                             data-no-surat="{{ $request->no_surat }}"
                                                                             data-nama="{{ $request->nama }}"
                                                                             data-no-telp="{{ $request->no_telp }}"
                                                                             data-departemen="{{ $request->departemen->name }}"
-                                                                            data-tanggal="{{ \Carbon\Carbon::parse($request->created_at)->format('d/m/Y') }}"
+                                                                            data-tanggal="{{ \Carbon\Carbon::parse($request->created_at)->format('Y-m-d') }}"
                                                                             data-jam-keluar="{{ $request->jam_out }}"
                                                                             data-jam-kembali="{{ $request->jam_in }}"
                                                                             data-keperluan="{{ $request->keperluan }}"
@@ -321,12 +322,11 @@
                                                                             data-acc-hr-ga="{{ $request->acc_hr_ga }}"
                                                                             data-acc-security-out="{{ $request->acc_security_out }}"
                                                                             data-acc-security-in="{{ $request->acc_security_in }}"
-                                                                            data-id="{{ $request->id }}"
                                                                             data-user-role-id="{{ auth()->user()->role_id }}"
                                                                             data-user-role-title="{{ auth()->user()->role->title }}">
                                                                         <i class="fas fa-eye"></i> Detail
                                                                     </button>
-                                                                    <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editModal"
+                                                                    <button type="button" class="btn btn-sm btn-primary edit-btn" data-toggle="modal" data-target="#editModal"
                                                                             data-id="{{ $request->id }}"
                                                                             data-no-surat="{{ $request->no_surat }}"
                                                                             data-nama="{{ $request->nama }}"
@@ -600,30 +600,72 @@
             display: none !important;
         }
     </style>
-
+    
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
+    
     <script>
-        $(document).ready(function() {
-            // Konfigurasi bahasa Indonesia untuk DataTables
-            const indonesianLanguage = {
-                "emptyTable": "Tidak ada data yang tersedia pada tabel ini",
-                "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
-                "infoEmpty": "Menampilkan 0 sampai 0 dari 0 data",
-                "infoFiltered": "(difilter dari _MAX_ total data)",
-                "lengthMenu": "Tampilkan _MENU_ data",
-                "loadingRecords": "Memuat...",
-                "processing": "Memproses...",
-                "search": "Cari:",
-                "zeroRecords": "Tidak ditemukan data yang sesuai",
-                "paginate": {
-                    "first": "Pertama",
-                    "last": "Terakhir",
-                    "next": "Selanjutnya",
-                    "previous": "Sebelumnya"
-                }
-            };
+        var tableKaryawan; // Deklarasikan variabel tableKaryawan secara global
 
-            // Inisialisasi DataTable dengan bahasa Indonesia
-            var requestTable = $('#requestTable').DataTable({
+        // Definisi bahasa Indonesia untuk DataTable
+        const indonesianLanguage = {
+            search: "Cari:",
+            lengthMenu: "Tampilkan _MENU_ data per halaman",
+            zeroRecords: "Data tidak ditemukan",
+            info: "Menampilkan halaman _PAGE_ dari _PAGES_",
+            infoEmpty: "Tidak ada data yang tersedia",
+            infoFiltered: "(difilter dari _MAX_ total data)",
+            paginate: {
+                first: "Pertama",
+                last: "Terakhir",
+                next: "Selanjutnya",
+                previous: "Sebelumnya"
+            }
+        };
+
+        // Fungsi untuk memuat data di tabel request karyawan
+        function loadDataKaryawan() {
+            const month = $('#filterMonthKaryawan').val();
+            const year = $('#filterYearKaryawan').val();
+            
+            $.get(`/request-karyawan/latest-requests?month=${month}&year=${year}`, function(response) {
+                // Clear dan reload data
+                tableKaryawan.clear().rows.add(response.data).draw();
+            });
+        }
+
+        function previewPDFKaryawan() {
+            const month = $('#filterMonthKaryawan').val();
+            const year = $('#filterYearKaryawan').val();
+            const exportType = $('input[name="previewTypeKaryawan"]:checked').val();
+            
+            const url = `/request-karyawan/export/preview/${month}/${year}?type=${exportType}`;
+            window.open(url, '_blank');
+        }
+
+        function exportDataKaryawan(format) {
+            const month = $('#filterMonthKaryawan').val();
+            const year = $('#filterYearKaryawan').val();
+            const exportType = $(`input[name="${format}TypeKaryawan"]:checked`).val();
+            
+            const url = `/request-karyawan/export/${format}/${month}/${year}?type=${exportType}`;
+            window.location.href = url;
+        }
+
+        $(document).ready(function() {
+            // Auto hide alerts after 5 seconds
+            setTimeout(function() {
+                $('.floating-alert').fadeOut('slow', function() {
+                    $(this).remove();
+                });
+            }, 5000);
+
+            // Add animation when alert appears
+            $('.floating-alert').hide().fadeIn('slow');
+
+            // Inisialisasi DataTable
+            tableKaryawan = $('#requestTable').DataTable({
                 processing: true,
                 serverSide: false,
                 pageLength: 10,
@@ -637,43 +679,43 @@
                     { "orderable": false, "targets": [0, 9, 10] }, // Nonaktifkan pengurutan untuk kolom No., Status, dan Aksi
                     { "searchable": false, "targets": [0, 9, 10] } // Nonaktifkan pencarian untuk kolom No., Status, dan Aksi
                 ],
-                "columns": [
-                    { 
-                        "data": null,
-                        "render": function(data, type, row, meta) {
-                            return meta.row + 1;
+                columns: [
+                    {
+                        data: null,
+                        render: function(data, type, row, meta) {
+                            return meta.row + meta.settings._iDisplayStart + 1;
                         }
                     }, // Kolom No.
-                    { "data": "no_surat" }, // Kolom No. Surat
-                    { "data": "departemen" }, // Kolom Departemen
-                    { "data": "nama" }, // Kolom Nama Karyawan
-                    { "data": "no_telp" }, // Kolom No. Telp
-                    { 
-                        "data": "tanggal",
-                        "render": function(data, type, row) {
+                    { data: 'no_surat' }, // Kolom No. Surat
+                    { data: 'departemen' }, // Kolom Departemen (sesuai JSON baru)
+                    { data: 'nama' }, // Kolom Nama Karyawan
+                    { data: 'no_telp' }, // Kolom No. Telp
+                    {
+                        data: 'tanggal',
+                        render: function(data, type, row) {
                             if (type === 'display') {
                                 return moment(data, 'YYYY-MM-DD').format('DD/MM/YYYY');
                             }
                             return data;
                         }
                     }, // Kolom Tanggal
-                    { "data": "jam_out" }, // Kolom Jam Keluar
-                    { "data": "jam_in" }, // Kolom Jam Kembali
-                    { "data": "keperluan" }, // Kolom Keperluan
-                    { 
-                        "data": null,
-                        "render": function(data, type, row) {
-                            // Langsung gunakan status_badge dan status_text yang sudah dihitung dari server
+                    { data: 'jam_out' }, // Kolom Jam Keluar
+                    { data: 'jam_in' }, // Kolom Jam Kembali
+                    { data: 'keperluan' }, // Kolom Keperluan
+                    {
+                        data: 'status_text', // Menggunakan 'status_text' dari JSON
+                        render: function(data, type, row) {
                             return `<span class="badge badge-${row.status_badge}">${row.status_text}</span>`;
                         }
                     }, // Kolom Status
-                    { 
-                        "data": null,
-                        "render": function(data, type, row) {
+                    {
+                        data: null,
+                        render: function(data, type, row) {
                             let buttons = '';
 
                             // Detail button
-                            buttons += `<button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#detailModal" 
+                            buttons += `<button type="button" class="btn btn-sm btn-info mr-1" data-toggle="modal" data-target="#detailModal"
+                                            data-id="${row.id}"
                                             data-no-surat="${row.no_surat}"
                                             data-nama="${row.nama}"
                                             data-no-telp="${row.no_telp}"
@@ -686,14 +728,13 @@
                                             data-acc-hr-ga="${row.acc_hr_ga}"
                                             data-acc-security-out="${row.acc_security_out}"
                                             data-acc-security-in="${row.acc_security_in}"
-                                            data-id="${row.id}"
                                             data-user-role-id="${row.user_role_id}"
                                             data-user-role-title="${row.user_role_title}">
                                             <i class="fas fa-eye"></i> Detail
                                         </button>`;
 
                             // Edit button
-                            buttons += `<button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editModal"
+                            buttons += `<button type="button" class="btn btn-sm btn-primary edit-btn" data-toggle="modal" data-target="#editModal"
                                             data-id="${row.id}"
                                             data-no-surat="${row.no_surat}"
                                             data-nama="${row.nama}"
@@ -716,15 +757,16 @@
                 ]
             });
 
-            // Auto hide alerts after 5 seconds
-            setTimeout(function() {
-                $('.floating-alert').fadeOut('slow', function() {
-                    $(this).remove();
-                });
-            }, 5000);
+            // Set bulan dan tahun saat ini sebagai default saat halaman dimuat
+            const currentDateKaryawan = new Date();
+            $('#filterMonthKaryawan').val(currentDateKaryawan.getMonth() + 1);
+            $('#filterYearKaryawan').val(currentDateKaryawan.getFullYear());
+            loadDataKaryawan(); // Muat data awal
 
-            // Add animation when alert appears
-            $('.floating-alert').hide().fadeIn('slow');
+            // Event change untuk filter bulan dan tahun
+            $('#filterMonthKaryawan, #filterYearKaryawan').change(function() {
+                loadDataKaryawan();
+            });
 
             // Handle status checkbox changes
             $('.status-action').click(function() {
@@ -962,14 +1004,14 @@
 
                 // Proceed with the AJAX request
                 $.ajax({
-                    url: '/request-karyawan/' + requestId + '/acc/' + roleId,
+                    url: `/request-karyawan/${requestId}/acc/${roleId}`,
                     type: 'POST',
                     data: {
                         _token: '{{ csrf_token() }}'
                     },
                     success: function(response) {
                         if(response.success) {
-                            alert(response.message);
+                            alert('Status berhasil diperbarui');
                             location.reload();
                         } else {
                             alert('Terjadi kesalahan: ' + response.message);
@@ -999,7 +1041,7 @@
                 $('#edit_no_surat').val(button.data('no-surat'));
                 $('#edit_nama').val(button.data('nama'));
                 $('#edit_no_telp').val(button.data('no-telp'));
-                $('#edit_departemen_id').val(button.data('departemen-id'));
+                $('#edit_departemen_id').val(button.data('departemen-id')); // Menggunakan data-departemen-id
                 $('#edit_jam_out').val(button.data('jam-keluar'));
                 $('#edit_jam_in').val(button.data('jam-kembali'));
                 $('#edit_keperluan').val(button.data('keperluan'));
@@ -1031,50 +1073,6 @@
                 });
             });
         });
-
-        // Fungsi untuk memuat data di tabel request karyawan
-        function loadDataKaryawan() {
-            const month = $('#filterMonthKaryawan').val();
-            const year = $('#filterYearKaryawan').val();
-            
-            $.get(`/request-karyawan/latest-requests?month=${month}&year=${year}`, function(data) {
-                // Clear dan reload data
-                var requestTable = $('#requestTable').DataTable();
-                requestTable.clear();
-                requestTable.rows.add(data).draw();
-            });
-        }
-
-        // Set bulan dan tahun saat ini sebagai default saat halaman dimuat
-        $(document).ready(function() {
-            const currentDateKaryawan = new Date();
-            $('#filterMonthKaryawan').val(currentDateKaryawan.getMonth() + 1);
-            $('#filterYearKaryawan').val(currentDateKaryawan.getFullYear());
-            loadDataKaryawan(); // Muat data awal
-        });
-
-        // Event change untuk filter bulan dan tahun
-        $('#filterMonthKaryawan, #filterYearKaryawan').change(function() {
-            loadDataKaryawan();
-        });
-
-        function previewPDFKaryawan() {
-            const month = $('#filterMonthKaryawan').val();
-            const year = $('#filterYearKaryawan').val();
-            const exportType = $('input[name="previewTypeKaryawan"]:checked').val();
-            
-            const url = `/request-karyawan/export/preview/${month}/${year}?type=${exportType}`;
-            window.open(url, '_blank');
-        }
-
-        function exportDataKaryawan(format) {
-            const month = $('#filterMonthKaryawan').val();
-            const year = $('#filterYearKaryawan').val();
-            const exportType = $(`input[name="${format}TypeKaryawan"]:checked`).val();
-            
-            const url = `/request-karyawan/export/${format}/${month}/${year}?type=${exportType}`;
-            window.location.href = url;
-        }
     </script>
 </body>
 </html>

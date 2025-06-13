@@ -5,20 +5,25 @@
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+    @php
+        $userPassword = auth()->user()->password;
+        $isDefaultPassword = Hash::check('password', $userPassword);
+    @endphp
+    <script>
+        console.log('User Password Hash:', '{{ $userPassword }}');
+        console.log('Is Default Password:', {{ $isDefaultPassword ? 'true' : 'false' }});
+
+        // Mendefinisikan variabel global untuk role_id dan data grafik
+        const currentUserRoleId = @json(auth()->user()->role_id);
+        const monthlyKaryawanData = @json(array_values($monthlyData['karyawan']));
+        const monthlyDriverData = @json(array_values($monthlyData['driver']));
+        const totalStatusData = @json([$totalDisetujui, $totalDitolak, $totalMenunggu]);
+    </script>
 	<div class="wrapper">
 		@include('layout.superadmin.header')
         @include('layout.superadmin.alert')
 
         <!-- Alert Password Default -->
-        @php
-            $userPassword = auth()->user()->password;
-            $isDefaultPassword = Hash::check('password', $userPassword);
-            
-            echo "<script>
-                console.log('User Password Hash:', '" . $userPassword . "');
-                console.log('Is Default Password:', " . ($isDefaultPassword ? 'true' : 'false') . ");
-            </script>";
-        @endphp
 
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show floating-alert" role="alert">
@@ -130,7 +135,7 @@
                         <!-- Statistik Karyawan -->
                         @if(auth()->user()->role_id != 4 && auth()->user()->role_id != 5)
                         <div class="col-md-6">
-                            <div class="card card-stats card-round" style="cursor: pointer;" onclick="window.location.href='{{ route('request-karyawan.index') }}'">
+                            <div class="card card-stats card-round" style="cursor: pointer;" onclick="window.location.href='{{ route('request-karyawan.index') }}';">
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-5">
@@ -153,7 +158,7 @@
                         <!-- Statistik Driver -->
                         @if(auth()->user()->role_id != 2 && auth()->user()->role_id != 3)
                         <div class="col-md-6">
-                            <div class="card card-stats card-round" style="cursor: pointer;" onclick="window.location.href='{{ route('request-driver.index') }}'">
+                            <div class="card card-stats card-round" style="cursor: pointer;" onclick="window.location.href='{{ route('request-driver.index') }}';">
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-5">
@@ -509,12 +514,7 @@
                 const year = $('#filterYear').val();
                 const type = $('#filterType').val();
                 
-                $.get(`/dashboard/latest-requests?month=${month}&year=${year}`, function(data) {
-                    // Filter berdasarkan tipe jika bukan 'all'
-                    if (type !== 'all') {
-                        data = data.filter(item => item.tipe === type);
-                    }
-                    
+                $.get(`/dashboard/latest-requests?month=${month}&year=${year}&dataType=${type}`, function(data) {
                     // Clear dan reload data
                     table.clear();
                     table.rows.add(data).draw();
@@ -549,8 +549,7 @@
                     const ctx = document.getElementById('weeklyChart').getContext('2d');
                     const datasetsWeekly = [];
 
-                    const currentUserRoleId = {{ auth()->user()->role_id }};
-
+                    // Menggunakan variabel yang sudah didefinisikan (global)
                     if (currentUserRoleId != 4 && currentUserRoleId != 5) {
                         datasetsWeekly.push({
                             label: 'Permohonan Karyawan',
@@ -607,47 +606,21 @@
         const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
         const monthlyDatasets = [];
 
-        const currentUserRoleIdMonthly = {{ auth()->user()->role_id }};
-
-        if (currentUserRoleIdMonthly != 4 && currentUserRoleIdMonthly != 5) {
+        // Menggunakan variabel yang sudah didefinisikan (global)
+        if (currentUserRoleId != 4 && currentUserRoleId != 5) {
             monthlyDatasets.push({
                 label: 'Permohonan Karyawan',
-                data: [
-                    {{ $monthlyData['karyawan'][1] }},
-                    {{ $monthlyData['karyawan'][2] }},
-                    {{ $monthlyData['karyawan'][3] }},
-                    {{ $monthlyData['karyawan'][4] }},
-                    {{ $monthlyData['karyawan'][5] }},
-                    {{ $monthlyData['karyawan'][6] }},
-                    {{ $monthlyData['karyawan'][7] }},
-                    {{ $monthlyData['karyawan'][8] }},
-                    {{ $monthlyData['karyawan'][9] }},
-                    {{ $monthlyData['karyawan'][10] }},
-                    {{ $monthlyData['karyawan'][11] }},
-                    {{ $monthlyData['karyawan'][12] }}
-                ],
+                data: monthlyKaryawanData,
                 borderColor: 'rgb(75, 192, 192)',
                 tension: 0.1
             });
         }
 
-        if (currentUserRoleIdMonthly != 2 && currentUserRoleIdMonthly != 3) {
+        // Menggunakan variabel yang sudah didefinisikan (global)
+        if (currentUserRoleId != 2 && currentUserRoleId != 3) {
             monthlyDatasets.push({
                 label: 'Permohonan Driver',
-                data: [
-                    {{ $monthlyData['driver'][1] }},
-                    {{ $monthlyData['driver'][2] }},
-                    {{ $monthlyData['driver'][3] }},
-                    {{ $monthlyData['driver'][4] }},
-                    {{ $monthlyData['driver'][5] }},
-                    {{ $monthlyData['driver'][6] }},
-                    {{ $monthlyData['driver'][7] }},
-                    {{ $monthlyData['driver'][8] }},
-                    {{ $monthlyData['driver'][9] }},
-                    {{ $monthlyData['driver'][10] }},
-                    {{ $monthlyData['driver'][11] }},
-                    {{ $monthlyData['driver'][12] }}
-                ],
+                data: monthlyDriverData,
                 borderColor: 'rgb(255, 99, 132)',
                 tension: 0.1
             });
@@ -676,7 +649,7 @@
             data: {
                 labels: ['Disetujui', 'Ditolak', 'Menunggu'],
                 datasets: [{
-                    data: [{{ $totalDisetujui }}, {{ $totalDitolak }}, {{ $totalMenunggu }}],
+                    data: totalStatusData,
                     backgroundColor: [
                         'rgb(75, 192, 192)',
                         'rgb(255, 99, 132)',

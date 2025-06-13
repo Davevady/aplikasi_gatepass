@@ -30,13 +30,28 @@ class RequestKaryawanController extends Controller
     {
         $title = 'Permohonan Izin Keluar Karyawan';
         $user = auth()->user();
-        $requestKaryawans = collect(); // Inisialisasi collection kosong
         $departemens = Departemen::all(); // Ambil semua data departemen
 
-        // Ambil data permohonan karyawan berdasarkan role
-        if ($user->role_id != 4 && $user->role_id != 5) { // Bukan role checker dan head unit
-            $requestKaryawans = RequestKaryawan::with('departemen')->get();
+        // Query dasar untuk permohonan karyawan
+        $karyawanQuery = RequestKaryawan::with('departemen');
+
+        // Filter berdasarkan role dan departemen
+        if ($user->role_id == 2) { // Role Lead
+            $karyawanQuery->where('departemen_id', $user->departemen_id);
+        } elseif ($user->role_id == 3) { // Role HR GA
+            // HR GA bisa melihat semua departemen kecuali Admin dan HR
+            $karyawanQuery->whereIn('departemen_id', function($query) {
+                $query->select('id')
+                    ->from('departemens')
+                    ->whereNotIn('id', [1, 2]); // Kecuali departemen Admin dan HR
+            });
+        } elseif ($user->role_id == 4 || $user->role_id == 5) { // Role Checker dan Head Unit
+            // Checker dan Head Unit tidak bisa melihat data karyawan
+            $karyawanQuery->whereRaw('1 = 0'); // Query yang selalu false
         }
+
+        // Ambil data permohonan karyawan yang sudah difilter
+        $requestKaryawans = $karyawanQuery->get();
         
         // Menghitung total request berdasarkan status dengan urutan persetujuan untuk permohonan yang terlihat oleh user
         $totalMenunggu = 0;
@@ -44,9 +59,10 @@ class RequestKaryawanController extends Controller
         $totalDitolak = 0;
         $totalRequest = 0;
 
-        if ($user->role_id != 4 && $user->role_id != 5) { // Bukan role checker dan head unit
-             // Permohonan Menunggu Karyawan: Belum disetujui semua pihak DAN belum ditolak oleh siapapun DAN belum keluar security
-            $totalMenunggu = RequestKaryawan::where(function($query) {
+        // Hitung statistik hanya jika user memiliki akses (bukan checker dan head unit)
+        if ($user->role_id != 4 && $user->role_id != 5) {
+             // Permohonan Menunggu Karyawan
+            $totalMenunggu = (clone $karyawanQuery)->where(function($query) {
                 $query->where(function($q) {
                     $q->where('acc_lead', 1) // Lead belum menyetujui
                       ->orWhere('acc_hr_ga', 1) // HR GA belum menyetujui setelah Lead acc
@@ -59,22 +75,22 @@ class RequestKaryawanController extends Controller
             })
             ->count();
                     
-            // Permohonan Disetujui Karyawan: Sudah disetujui Lead, HR GA, dan Security Out (baik sudah kembali atau belum)
-            $totalDisetujui = RequestKaryawan::where('acc_lead', 2)
+            // Permohonan Disetujui Karyawan
+            $totalDisetujui = (clone $karyawanQuery)->where('acc_lead', 2)
                 ->where('acc_hr_ga', 2)
                 ->where('acc_security_out', 2)
                 ->count();
                     
-            // Permohonan Ditolak Karyawan: Ditolak oleh salah satu pihak
-            $totalDitolak = RequestKaryawan::where(function($query) {
+            // Permohonan Ditolak Karyawan
+            $totalDitolak = (clone $karyawanQuery)->where(function($query) {
                 $query->where('acc_lead', 3) // Lead menolak
                     ->orWhere('acc_hr_ga', 3) // HR GA menolak
                     ->orWhere('acc_security_out', 3) // Security Out menolak
                     ->orWhere('acc_security_in', 3); // Security In menolak
             })->count();
                     
-            // Total semua request karyawan yang terlihat oleh user
-            $totalRequest = RequestKaryawan::count();
+            // Total semua request karyawan
+            $totalRequest = (clone $karyawanQuery)->count();
         }
 
         // Mengambil tahun-tahun yang tersedia untuk filter
@@ -543,7 +559,21 @@ class RequestKaryawanController extends Controller
      */
     private function getDataForExport($month, $year, $type, $exportType)
     {
+        $user = auth()->user(); // Ambil user yang sedang login
         $query = RequestKaryawan::with(['departemen']);
+
+        // Terapkan filter departemen berdasarkan role user
+        if ($user->role_id == 2) { // Role Lead
+            $query->where('departemen_id', $user->departemen_id);
+        } elseif ($user->role_id == 3) { // Role HR GA
+            $query->whereIn('departemen_id', function($q) {
+                $q->select('id')
+                    ->from('departemens')
+                    ->whereNotIn('id', [1, 2]); // Kecuali departemen Admin dan HR
+            });
+        } elseif ($user->role_id == 4 || $user->role_id == 5) { // Role Checker dan Head Unit
+            $query->whereRaw('1 = 0'); // Query yang selalu false
+        }
 
         if ($exportType === 'filtered') {
             $query->whereMonth('created_at', $month)
@@ -620,12 +650,12 @@ class RequestKaryawanController extends Controller
                                 ];
                             });
 
-        // Filter berdasarkan tipe jika bukan 'all'
-        if ($type !== 'all') {
-            $requests = $requests->filter(function($item) use ($type) {
-                return $item['tipe'] === $type;
-            });
-        }
+        // Filter berdasarkan tipe jika bukan 'all' - ini tidak lagi diperlukan karena sudah difilter oleh peran
+        // if ($type !== 'all') {
+        //     $requests = $requests->filter(function($item) use ($type) {
+        //         return $item['tipe'] === $type;
+        //     });
+        // }
 
         return $requests->values()->all(); // Reset array keys
     }
@@ -703,16 +733,39 @@ class RequestKaryawanController extends Controller
         $month = $request->input('month', date('m'));
         $year = $request->input('year', date('Y'));
         $user = auth()->user();
+        Log::debug('User Role ID in RequestKaryawanController@getLatestRequests: ' . $user->role_id . ' - User Departemen ID: ' . $user->departemen_id . ' - User Departemen Name: ' . ($user->departemen ? $user->departemen->name : 'N/A'));
         $data = [];
 
+        $karyawanQuery = RequestKaryawan::with(['departemen']);
+
+        // Filter berdasarkan role dan departemen untuk karyawan
+        if ($user->role_id == 2) { // Role Lead
+            Log::debug('Applying Lead filter in RequestKaryawanController@getLatestRequests for departemen_id: ' . $user->departemen_id);
+            $karyawanQuery->where('departemen_id', $user->departemen_id);
+        } elseif ($user->role_id == 3) { // Role HR GA
+            Log::debug('Applying HR GA filter in RequestKaryawanController@getLatestRequests (excluding Admin and HR)');
+            $karyawanQuery->whereIn('departemen_id', function($query) {
+                $query->select('id')
+                    ->from('departemens')
+                    ->whereNotIn('id', [1, 2]);
+            });
+        } elseif ($user->role_id == 4 || $user->role_id == 5) { // Role Checker dan Head Unit
+            Log::debug('Applying Checker/Head Unit filter in RequestKaryawanController@getLatestRequests (no karyawan data)');
+            $karyawanQuery->whereRaw('1 = 0');
+        }
+
+        // Hanya ambil data karyawan jika user memiliki akses (bukan role checker dan head unit)
         if ($user->role_id != 4 && $user->role_id != 5) {
-            $requests = RequestKaryawan::with(['departemen'])
+            $requests = (clone $karyawanQuery)
                 ->whereMonth('created_at', $month)
                 ->whereYear('created_at', $year)
                 ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(function ($item) use ($user) {
-                    Log::debug('Original Request Karyawan Item: ' . json_encode($item->toArray()));
+                ->get();
+                Log::debug('Fetched Karyawan Requests in RequestKaryawanController@getLatestRequests (before map/filter): ' . $requests->count() . ' items');
+
+                $karyawanRequests = $requests->map(function ($item) use ($user) {
+                    Log::debug('Processing Karyawan Item in RequestKaryawanController@getLatestRequests ID: ' . $item->id . ' - Departemen ID: ' . $item->departemen_id . ' - Departemen Name: ' . $item->departemen->name);
+                    // Log::debug('Original Request Karyawan Item: ' . json_encode($item->toArray()));
                     $statusBadge = 'warning';
                     $text = 'Menunggu';
                     
@@ -793,14 +846,23 @@ class RequestKaryawanController extends Controller
                         'user_role_title' => $user->role->title ?? '',
                         'departemen_id' => $item->departemen_id,
                     ];
-                    Log::debug('Mapped Request Karyawan Item: ' . json_encode($mappedItem));
-                    return $mappedItem;
-                });
 
-            $data = array_merge($data, $requests->toArray());
+                    // Logika filter departemen untuk Lead
+                    if ($user->role_id == 2 && $item->departemen_id != $user->departemen_id) {
+                        Log::debug('Skipping item for Lead in RequestKaryawanController@getLatestRequests: ' . $item->id . ' - Item Departemen ID: ' . $item->departemen_id . ' vs User Departemen ID: ' . $user->departemen_id);
+                        return null;
+                    }
+
+                    return $mappedItem;
+                })
+                ->filter() // Hapus item yang null (tidak lolos filter Lead)
+                ->values() // Reset index array
+                ->toArray();
+            
+            $data = array_merge($data, $karyawanRequests);
         }
 
-        return response()->json($data);
+        return response()->json(['data' => $data]);
     }
 
     /**
