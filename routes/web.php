@@ -48,7 +48,8 @@ Route::middleware(['auth'])->group(function () {
     
     // request karyawan - hanya bisa diakses admin, security, lead, hr-ga
     Route::middleware(['role:admin,security,lead,hr-ga'])->group(function () {
-        Route::resource('request-karyawan', RequestKaryawanController::class)->only(['index', 'show']);
+        Route::resource('request-karyawan', RequestKaryawanController::class)->only(['index']);
+        Route::get('/request-karyawan/latest-requests', [RequestKaryawanController::class, 'getLatestRequests'])->name('request-karyawan.latest-requests');
         Route::put('/request-karyawan/{id}', [RequestKaryawanController::class, 'update'])->name('request-karyawan.update');
         Route::post('/request-karyawan/{id}/acc/{role_id}', [RequestKaryawanController::class, 'accRequest'])->name('request-karyawan.acc');
         Route::post('/request-karyawan/{id}/update-status', [RequestKaryawanController::class, 'updateStatus'])->name('request-karyawan.update-status');
@@ -57,11 +58,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/request-karyawan/export/preview/{month}/{year}/{type?}', [RequestKaryawanController::class, 'exportPDF'])->name('request-karyawan.export.preview');
         Route::get('/request-karyawan/export/pdf/{month}/{year}/{type?}', [RequestKaryawanController::class, 'exportPDF'])->name('request-karyawan.export.pdf');
         Route::get('/request-karyawan/export/excel/{month}/{year}/{type?}', [RequestKaryawanController::class, 'exportExcel'])->name('request-karyawan.export.excel');
+        Route::get('/request-karyawan/export/single-pdf/{id}', [RequestKaryawanController::class, 'exportSinglePDF'])->name('request-karyawan.exportSinglePDF');
     });
 
     // request driver - hanya bisa diakses admin, security, checker, head-unit  
     Route::middleware(['role:admin,security,checker,head-unit'])->group(function () {
-        Route::resource('request-driver', RequestDriverController::class)->only(['index', 'show']);
+        Route::resource('request-driver', RequestDriverController::class)->only(['index']);
+        Route::get('/request-driver/latest-requests', [RequestDriverController::class, 'getLatestRequests'])->name('request-driver.latest-requests');
         Route::put('/request-driver/{id}', [RequestDriverController::class, 'update'])->name('request-driver.update');
         Route::post('/request-driver/{id}/acc/{role_id}', [RequestDriverController::class, 'accRequest'])->name('request-driver.acc');
         Route::post('/request-driver/{id}/update-status', [RequestDriverController::class, 'updateStatus'])->name('request-driver.update-status');
@@ -70,6 +73,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/request-driver/export/preview/{month}/{year}/{type?}', [RequestDriverController::class, 'exportPDF'])->name('request-driver.export.preview');
         Route::get('/request-driver/export/pdf/{month}/{year}/{type?}', [RequestDriverController::class, 'exportPDF'])->name('request-driver.export.pdf');
         Route::get('/request-driver/export/excel/{month}/{year}/{type?}', [RequestDriverController::class, 'exportExcel'])->name('request-driver.export.excel');
+        Route::get('/request-driver/export/single-pdf/{id}', [RequestDriverController::class, 'exportSinglePDF'])->name('request-driver.exportSinglePDF');
     });
     
     // bisa diakses semua user yang sudah login

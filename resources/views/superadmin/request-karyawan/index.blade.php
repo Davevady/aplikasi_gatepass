@@ -253,7 +253,59 @@
                                                                 <td>{{ $request->jam_in }}</td>
                                                                 <td>{{ $request->keperluan }}</td>
                                                                 <td>
-                                                                    <span class="badge badge-{{ $request->status_badge }}">{{ $request->status_text }}</span>
+                                                                    @php
+                                                                        $status = 'warning'; // default menunggu
+                                                                        $text = 'Menunggu';
+                                                                        
+                                                                        // Cek jika ada yang menolak
+                                                                        if($request->acc_lead == 3) {
+                                                                            $status = 'danger';
+                                                                            $text = 'Ditolak Lead';
+                                                                        } 
+                                                                        elseif($request->acc_hr_ga == 3) {
+                                                                            $status = 'danger';
+                                                                            $text = 'Ditolak HR/GA';
+                                                                        }
+                                                                        // Cek urutan persetujuan sesuai alur
+                                                                        elseif($request->acc_lead == 1) {
+                                                                            $status = 'warning';
+                                                                            $text = 'Menunggu Lead';
+                                                                        }
+                                                                        elseif($request->acc_lead == 2 && $request->acc_hr_ga == 1) {
+                                                                            $status = 'warning';
+                                                                            $text = 'Menunggu HR/GA';
+                                                                        }
+                                                                        // Jika sudah disetujui Lead dan HR/GA
+                                                                        elseif($request->acc_lead == 2 && $request->acc_hr_ga == 2) {
+                                                                            // Cek status security
+                                                                            if($request->acc_security_out == 1) {
+                                                                                // Cek status hangus (jam in sudah lewat tapi belum keluar)
+                                                                                if (\Carbon\Carbon::parse($request->jam_in)->isPast()) {
+                                                                                    $status = 'danger';
+                                                                                    $text = 'Hangus';
+                                                                                } else {
+                                                                                    $status = 'info';
+                                                                                    $text = 'Disetujui (Belum Keluar)';
+                                                                                }
+                                                                            } elseif ($request->acc_security_out == 2) {
+                                                                                // Cek status security in
+                                                                                if ($request->acc_security_in == 1) {
+                                                                                    // Cek status terlambat (sudah keluar tapi belum kembali)
+                                                                                    if (\Carbon\Carbon::parse($request->jam_in)->isPast()) {
+                                                                                        $status = 'warning';
+                                                                                        $text = 'Terlambat';
+                                                                                    } else {
+                                                                                        $status = 'info';
+                                                                                        $text = 'Sudah Keluar (Belum Kembali)';
+                                                                                    }
+                                                                                } elseif ($request->acc_security_in == 2) {
+                                                                                    $status = 'success';
+                                                                                    $text = 'Sudah Kembali';
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    @endphp
+                                                                    <span class="badge badge-{{ $status }}">{{ $text }}</span>
                                                                 </td>
                                                                 <td>
                                                                     <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#detailModal" 
@@ -272,51 +324,22 @@
                                                                             data-id="{{ $request->id }}"
                                                                             data-user-role-id="{{ auth()->user()->role_id }}"
                                                                             data-user-role-title="{{ auth()->user()->role->title }}">
-                                                                            <i class="fas fa-eye"></i> Detail
-                                                                        </button>
-                                                                        <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editModal"
-                                                                                data-id="{{ $request->id }}"
-                                                                                data-no-surat="{{ $request->no_surat }}"
-                                                                                data-nama="{{ $request->nama }}"
-                                                                                data-no-telp="{{ $request->no_telp }}"
-                                                                                data-departemen-id="{{ $request->departemen_id }}"
-                                                                                data-jam-keluar="{{ $request->jam_out }}"
-                                                                                data-jam-kembali="{{ $request->jam_in }}"
-                                                                                data-keperluan="{{ $request->keperluan }}">
-                                                                            <i class="fas fa-edit"></i> Edit
-                                                                        </button>
-                                                                        {{-- Tombol ACC untuk Role Lead --}}
-                                                                        @if(auth()->user()->role_id == 1 || (auth()->user()->role_id == 2 && ($request->acc_lead == 1 || $request->acc_lead == 3)))
-                                                                        <button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                                                data-id="{{ $request->id }}"
-                                                                                data-role-id="{{ auth()->user()->role_id }}">
-                                                                            <i class="fas fa-check"></i> ACC
-                                                                        </button>
-                                                                        {{-- Tombol ACC untuk Role HR GA --}}
-                                                                        @elseif(auth()->user()->role_id == 1 || (auth()->user()->role_id == 3 && ($request->acc_hr_ga == 1 || $request->acc_hr_ga == 3) && $request->acc_lead == 2))
-                                                                        <button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                                                data-id="{{ $request->id }}"
-                                                                                data-role-id="{{ auth()->user()->role_id }}">
-                                                                            <i class="fas fa-check"></i> ACC
-                                                                        </button>
-                                                                        {{-- Tombol ACC untuk Role Security --}}
-                                                                        @elseif(auth()->user()->role_id == 1 || (auth()->user()->role_id == 6 && $request->acc_lead == 2 && $request->acc_hr_ga == 2))
-                                                                            @if($request->acc_security_out == 1 || $request->acc_security_out == 3)
-                                                                            {{-- Tombol ACC Out --}}
-                                                                            <button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                                                    data-id="{{ $request->id }}"
-                                                                                    data-role-id="{{ auth()->user()->role_id }}">
-                                                                                <i class="fas fa-sign-out-alt"></i> ACC Out
-                                                                            </button>
-                                                                            @elseif($request->acc_security_out == 2 && ($request->acc_security_in == 1 || $request->acc_security_in == 3))
-                                                                            {{-- Tombol ACC In --}}
-                                                                            <button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                                                    data-id="{{ $request->id }}"
-                                                                                    data-role-id="{{ auth()->user()->role_id }}">
-                                                                                <i class="fas fa-sign-in-alt"></i> ACC In
-                                                                            </button>
-                                                                            @endif
-                                                                        @endif
+                                                                        <i class="fas fa-eye"></i> Detail
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editModal"
+                                                                            data-id="{{ $request->id }}"
+                                                                            data-no-surat="{{ $request->no_surat }}"
+                                                                            data-nama="{{ $request->nama }}"
+                                                                            data-no-telp="{{ $request->no_telp }}"
+                                                                            data-departemen-id="{{ $request->departemen_id }}"
+                                                                            data-jam-keluar="{{ $request->jam_out }}"
+                                                                            data-jam-kembali="{{ $request->jam_in }}"
+                                                                            data-keperluan="{{ $request->keperluan }}">
+                                                                        <i class="fas fa-edit"></i> Edit
+                                                                    </button>
+                                                                    <a href="{{ route('request-karyawan.exportSinglePDF', $request->id) }}" target="_blank" class="btn btn-sm btn-danger ml-1">
+                                                                        <i class="fas fa-file-pdf"></i> PDF
+                                                                    </a>
                                                                 </td>
                                                             </tr>
                                                         @endforeach
@@ -605,22 +628,14 @@
                 serverSide: false,
                 pageLength: 10,
                 language: indonesianLanguage,
-                "order": [[3, "desc"]], // Urutkan berdasarkan tanggal (kolom ke-4) secara descending
+                "order": [[0, "asc"]], // Urutkan berdasarkan kolom nomor urut secara ascending
                 "responsive": true,
                 "scrollX": true,
                 "autoWidth": false,
                 "dom": '<"top"f>rt<"bottom"lp><"clear">',
                 "columnDefs": [
-                    { 
-                        "orderable": false, 
-                        "targets": [0, 8],
-                        "data": null,
-                        "defaultContent": ""
-                    },
-                    { 
-                        "searchable": false, 
-                        "targets": [0, 8]
-                    }
+                    { "orderable": false, "targets": [0, 9, 10] }, // Nonaktifkan pengurutan untuk kolom No., Status, dan Aksi
+                    { "searchable": false, "targets": [0, 9, 10] } // Nonaktifkan pencarian untuk kolom No., Status, dan Aksi
                 ],
                 "columns": [
                     { 
@@ -628,7 +643,7 @@
                         "render": function(data, type, row, meta) {
                             return meta.row + 1;
                         }
-                    }, // Kolom No
+                    }, // Kolom No.
                     { "data": "no_surat" }, // Kolom No. Surat
                     { "data": "departemen" }, // Kolom Departemen
                     { "data": "nama" }, // Kolom Nama Karyawan
@@ -690,34 +705,10 @@
                                             <i class="fas fa-edit"></i> Edit
                                         </button>`;
 
-                            // ACC button logic
-                            if (row.user_role_id == 1 || (row.user_role_id == 2 && (row.acc_lead == 1 || row.acc_lead == 3))) {
-                                buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                data-id="${row.id}"
-                                                data-role-id="${row.user_role_id}">
-                                                <i class="fas fa-check"></i> ACC
-                                            </button>`;
-                            } else if (row.user_role_id == 1 || (row.user_role_id == 3 && (row.acc_hr_ga == 1 || row.acc_hr_ga == 3) && row.acc_lead == 2)) {
-                                buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                data-id="${row.id}"
-                                                data-role-id="${row.user_role_id}">
-                                                <i class="fas fa-check"></i> ACC
-                                            </button>`;
-                            } else if (row.user_role_id == 1 || (row.user_role_id == 6 && row.acc_lead == 2 && row.acc_hr_ga == 2)) {
-                                if (row.acc_security_out == 1 || row.acc_security_out == 3) {
-                                    buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                    data-id="${row.id}"
-                                                    data-role-id="${row.user_role_id}">
-                                                    <i class="fas fa-sign-out-alt"></i> ACC Out
-                                                </button>`;
-                                } else if (row.acc_security_out == 2 && (row.acc_security_in == 1 || row.acc_security_in == 3)) {
-                                    buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                    data-id="${row.id}"
-                                                    data-role-id="${row.user_role_id}">
-                                                    <i class="fas fa-sign-in-alt"></i> ACC In
-                                                </button>`;
-                                }
-                            }
+                            // PDF Export button
+                            buttons += `<a href="/request-karyawan/export/single-pdf/${row.id}" target="_blank" class="btn btn-sm btn-danger ml-1">
+                                            <i class="fas fa-file-pdf"></i> PDF
+                                        </a>`;
 
                             return buttons;
                         }
@@ -917,24 +908,24 @@
                     $('#hr-ga-actions').removeClass('hidden-by-js');
                     $('#security-out-actions').removeClass('hidden-by-js');
                     $('#security-in-actions').removeClass('hidden-by-js');
-                } else if (userRoleId == 2) { // Lead (ID 2)
-                    // Lead can see their action buttons if their approval is pending (1) OR rejected (3) AND not rejected by any subsequent role
-                    if ((accLead === 1 || accLead === 3) && accHrGa !== 3 && accSecurityOut !== 3 && accSecurityIn !== 3) {
+                } else if (userRoleId == 2) { // Lead (ID 2) - analogous to Admin (ID 4) for Driver
+                    // Lead can see their action buttons ONLY if HR/GA has NOT yet approved
+                    if (accHrGa !== 2) {
                         $('#lead-actions').removeClass('hidden-by-js');
                     }
-                } else if (userRoleId == 3) { // HR/GA (ID 3)
-                    // HR/GA can see their action buttons if Lead has approved (2) AND HR/GA's approval is pending (1) OR rejected (3) AND not rejected by any subsequent security role
-                    if (accLead === 2 && (accHrGa === 1 || accHrGa === 3) && accSecurityOut !== 3 && accSecurityIn !== 3) {
+                } else if (userRoleId == 3) { // HR/GA (ID 3) - analogous to Head Unit (ID 5) for Driver
+                    // HR/GA can see their action buttons if Lead has approved
+                    if (accLead === 2) {
                         $('#hr-ga-actions').removeClass('hidden-by-js');
                     }
-                } else if (userRoleId == 6) { // Security (ID 6)
-                    // Security can see their Security Out action buttons if Lead and HR/GA have approved AND Security Out's approval is pending (1) OR rejected (3)
-                    if (accLead === 2 && accHrGa === 2 && (accSecurityOut === 1 || accSecurityOut === 3) && accSecurityIn !== 3) {
+                } else if (userRoleId == 6) { // Security (ID 6) - analogous to Security (ID 6) for Driver
+                    // Security can see their Security Out action buttons if Lead and HR/GA have approved
+                    if (accLead === 2 && accHrGa === 2) {
                         $('#security-out-actions').removeClass('hidden-by-js');
-                    }
-                    // Security can see their Security In action buttons if Security Out has approved AND Security In's approval is pending (1) OR rejected (3)
-                    else if (accLead === 2 && accHrGa === 2 && accSecurityOut === 2 && (accSecurityIn === 1 || accSecurityIn === 3)) {
-                        $('#security-in-actions').removeClass('hidden-by-js');
+                        // Security can see their Security In action buttons if Security Out has also approved
+                        if (accSecurityOut === 2) {
+                            $('#security-in-actions').removeClass('hidden-by-js');
+                        }
                     }
                 }
 

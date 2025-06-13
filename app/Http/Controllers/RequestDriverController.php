@@ -596,6 +596,7 @@ class RequestDriverController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($item) use ($user) {
+                Log::debug('Original Request Driver Item: ' . json_encode($item->toArray()));
                 $statusBadge = 'warning';
                 $text = 'Menunggu';
                 
@@ -655,7 +656,7 @@ class RequestDriverController extends Controller
                     }
                 }
 
-                return [
+                $mappedItem = [
                     'id' => $item->id,
                     'no_surat' => $item->no_surat ?? '-',
                     'nama_ekspedisi' => $item->ekspedisi ? $item->ekspedisi->nama_ekspedisi : '-',
@@ -675,6 +676,8 @@ class RequestDriverController extends Controller
                     'user_role_id' => $user->role_id,
                     'user_role_title' => $user->role->title ?? '',
                 ];
+                Log::debug('Mapped Request Driver Item: ' . json_encode($mappedItem));
+                return $mappedItem;
             });
 
         $data = array_merge($data, $requests->toArray());
@@ -859,5 +862,76 @@ class RequestDriverController extends Controller
                 ];
             }
         }, 'laporan-driver-' . ($type === 'all' ? 'all' : $month . '-' . $year) . '.xlsx');
+    }
+
+    /**
+     * Export data permohonan driver ke PDF per item
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\Response
+     */
+    public function exportSinglePDF($id)
+    {
+        $requestDriver = RequestDriver::with('ekspedisi')->find($id);
+
+        if (!$requestDriver) {
+            abort(404, 'Data Permohonan Driver tidak ditemukan.');
+        }
+
+        // Format data sesuai kebutuhan PDF
+        $data = [
+            'no_surat' => $requestDriver->no_surat,
+            'nama_ekspedisi' => $requestDriver->ekspedisi->nama_ekspedisi,
+            'nopol_kendaraan' => $requestDriver->nopol_kendaraan,
+            'nama_driver' => $requestDriver->nama_driver,
+            'no_hp_driver' => $requestDriver->no_hp_driver,
+            'nama_kernet' => $requestDriver->nama_kernet,
+            'no_hp_kernet' => $requestDriver->no_hp_kernet,
+            'keperluan' => $requestDriver->keperluan,
+            'jam_out' => $requestDriver->jam_out,
+            'jam_in' => $requestDriver->jam_in,
+            'tanggal' => \Carbon\Carbon::parse($requestDriver->created_at)->format('Y-m-d'), // Menambahkan tanggal pengajuan
+        ];
+
+        // Logika untuk status persetujuan yang lebih detail
+        $statusAdmin = 'Menunggu';
+        if ($requestDriver->acc_admin == 2) {
+            $statusAdmin = 'Disetujui';
+        } elseif ($requestDriver->acc_admin == 3) {
+            $statusAdmin = 'Ditolak';
+        }
+
+        $statusHeadUnit = 'Menunggu';
+        if ($requestDriver->acc_head_unit == 2) {
+            $statusHeadUnit = 'Disetujui';
+        } elseif ($requestDriver->acc_head_unit == 3) {
+            $statusHeadUnit = 'Ditolak';
+        }
+
+        $statusSecurityOut = 'Belum Keluar';
+        if ($requestDriver->acc_security_out == 2) {
+            $statusSecurityOut = 'Sudah Keluar';
+        } elseif ($requestDriver->acc_security_out == 3) {
+            $statusSecurityOut = 'Ditolak Keluar';
+        }
+
+        $statusSecurityIn = 'Belum Kembali';
+        if ($requestDriver->acc_security_in == 2) {
+            $statusSecurityIn = 'Sudah Kembali';
+        } elseif ($requestDriver->acc_security_in == 3) {
+            $statusSecurityIn = 'Ditolak Kembali';
+        }
+
+        // Tambahkan status ke data
+        $data['status_admin'] = $statusAdmin;
+        $data['status_head_unit'] = $statusHeadUnit;
+        $data['status_security_out'] = $statusSecurityOut;
+        $data['status_security_in'] = $statusSecurityIn;
+
+        $pdf = PdfFacade::loadView('exports.driver-single', compact('data'));
+        $pdf->setPaper('A4', 'portrait');
+        // Bersihkan karakter "/" dan "\" dari no_surat
+        $cleanNoSurat = str_replace(['/', '\\'], '-', $requestDriver->no_surat);
+        return $pdf->stream('surat_izin_driver_' . $cleanNoSurat . '.pdf');
     }
 }

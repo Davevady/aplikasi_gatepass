@@ -341,38 +341,9 @@
                                                                         data-keperluan="{{ $request->keperluan }}">
                                                                     <i class="fas fa-edit"></i> Edit
                                                                 </button>
-                                                                {{-- Tombol ACC untuk Role Admin --}}
-                                                                @if(auth()->user()->role_id == 1 || (auth()->user()->role_id == 4 && $request->acc_admin == 1))
-                                                                <button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                                        data-id="{{ $request->id }}"
-                                                                        data-role-id="{{ auth()->user()->role_id }}">
-                                                                    <i class="fas fa-check"></i> ACC
-                                                                </button>
-                                                                {{-- Tombol ACC untuk Role Head Unit --}}
-                                                                @elseif(auth()->user()->role_id == 1 || (auth()->user()->role_id == 5 && $request->acc_head_unit == 1 && $request->acc_admin == 2))
-                                                                <button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                                        data-id="{{ $request->id }}"
-                                                                        data-role-id="{{ auth()->user()->role_id }}">
-                                                                    <i class="fas fa-check"></i> ACC
-                                                                </button>
-                                                                {{-- Tombol ACC untuk Role Security --}}
-                                                                @elseif(auth()->user()->role_id == 1 || (auth()->user()->role_id == 6 && $request->acc_admin == 2 && $request->acc_head_unit == 2))
-                                                                    @if($request->acc_security_out == 1)
-                                                                    {{-- Tombol ACC Out --}}
-                                                                    <button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                                            data-id="{{ $request->id }}"
-                                                                            data-role-id="{{ auth()->user()->role_id }}">
-                                                                        <i class="fas fa-sign-out-alt"></i> ACC Out
-                                                                    </button>
-                                                                    @elseif($request->acc_security_out == 2 && $request->acc_security_in == 1)
-                                                                    {{-- Tombol ACC In --}}
-                                                                    <button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                                            data-id="{{ $request->id }}"
-                                                                            data-role-id="{{ auth()->user()->role_id }}">
-                                                                        <i class="fas fa-sign-in-alt"></i> ACC In
-                                                                    </button>
-                                                                    @endif
-                                                                @endif
+                                                                <a href="{{ route('request-driver.exportSinglePDF', $request->id) }}" target="_blank" class="btn btn-sm btn-danger ml-1">
+                                                                    <i class="fas fa-file-pdf"></i> PDF
+                                                                </a>
                                                             </td>
                                                         </tr>
                                                     @endforeach
@@ -671,14 +642,13 @@
                 serverSide: false,
                 pageLength: 10,
                 language: indonesianLanguage,
-                "order": [[5, "desc"]], // Urutkan berdasarkan tanggal (kolom ke-6) secara descending
+                "order": [[0, "asc"]], // Urutkan berdasarkan kolom nomor urut secara ascending
                 "responsive": true,
                 "scrollX": true,
                 "autoWidth": false,
                 "dom": '<"top"f>rt<"bottom"lp><"clear">',
                 "columnDefs": [
-                    { "orderable": false, "targets": [0, 10] }, // Nonaktifkan pengurutan untuk kolom No dan Aksi
-                    { "searchable": false, "targets": [0, 10] } // Nonaktifkan pencarian untuk kolom No dan Aksi
+                    { "orderable": false, "searchable": false, "targets": [0, 9, 10] } // Nonaktifkan pengurutan dan pencarian untuk kolom No., Status, dan Aksi
                 ],
                 "columns": [
                     { 
@@ -703,6 +673,7 @@
                     { 
                         "data": null,
                         "render": function(data, type, row) {
+                            // Langsung gunakan status_badge dan status_text yang sudah dihitung dari server
                             return `<span class="badge badge-${row.status_badge}">${row.status_text}</span>`;
                         }
                     }, // Kolom Status
@@ -710,6 +681,7 @@
                         "data": null,
                         "render": function(data, type, row) {
                             let buttons = '';
+                            console.log(row);
 
                             // Detail button
                             buttons += `<button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#detailModal" 
@@ -749,34 +721,10 @@
                                             <i class="fas fa-edit"></i> Edit
                                         </button>`;
 
-                            // ACC button logic
-                            if (row.user_role_id == 1 || (row.user_role_id == 4 && row.acc_admin == 1)) {
-                                buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                data-id="${row.id}"
-                                                data-role-id="${row.user_role_id}">
-                                                <i class="fas fa-check"></i> ACC
-                                            </button>`;
-                            } else if (row.user_role_id == 1 || (row.user_role_id == 5 && row.acc_head_unit == 1 && row.acc_admin == 2)) {
-                                buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                data-id="${row.id}"
-                                                data-role-id="${row.user_role_id}">
-                                                <i class="fas fa-check"></i> ACC
-                                            </button>`;
-                            } else if (row.user_role_id == 1 || (row.user_role_id == 6 && row.acc_admin == 2 && row.acc_head_unit == 2)) {
-                                if (row.acc_security_out == 1) {
-                                    buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                    data-id="${row.id}"
-                                                    data-role-id="${row.user_role_id}">
-                                                    <i class="fas fa-sign-out-alt"></i> ACC Out
-                                                </button>`;
-                                } else if (row.acc_security_out == 2 && row.acc_security_in == 1) {
-                                    buttons += `<button type="button" class="btn btn-sm btn-success acc-btn" 
-                                                    data-id="${row.id}"
-                                                    data-role-id="${row.user_role_id}">
-                                                    <i class="fas fa-sign-in-alt"></i> ACC In
-                                                </button>`;
-                                }
-                            }
+                            // PDF Export button
+                            buttons += `<a href="/request-driver/export/single-pdf/${row.id}" target="_blank" class="btn btn-sm btn-danger ml-1">
+                                            <i class="fas fa-file-pdf"></i> PDF
+                                        </a>`;
 
                             return buttons;
                         }

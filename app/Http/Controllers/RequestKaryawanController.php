@@ -562,7 +562,7 @@ class RequestKaryawanController extends Controller
                                 } 
                                 elseif($item->acc_hr_ga == 3) {
                                     $statusBadge = 'danger';
-                                    $text = 'Ditolak HR GA';
+                                    $text = 'Ditolak HR/GA';
                                 }
                                 elseif($item->acc_security_out == 3) {
                                     $statusBadge = 'danger';
@@ -578,7 +578,7 @@ class RequestKaryawanController extends Controller
                                 }
                                 elseif($item->acc_lead == 2 && $item->acc_hr_ga == 1) {
                                     $statusBadge = 'warning';
-                                    $text = 'Menunggu HR GA';
+                                    $text = 'Menunggu HR/GA';
                                 }
                                 elseif($item->acc_lead == 2 && $item->acc_hr_ga == 2) {
                                     if($item->acc_security_out == 1) {
@@ -587,7 +587,7 @@ class RequestKaryawanController extends Controller
                                             $text = 'Hangus';
                                         } else {
                                             $statusBadge = 'info';
-                                            $text = 'Menunggu Security Keluar';
+                                            $text = 'Disetujui (Belum Keluar)';
                                         }
                                     } elseif ($item->acc_security_out == 2) {
                                         if ($item->acc_security_in == 1) {
@@ -596,7 +596,7 @@ class RequestKaryawanController extends Controller
                                                 $text = 'Terlambat';
                                             } else {
                                                 $statusBadge = 'info';
-                                                $text = 'Menunggu Security Masuk';
+                                                $text = 'Sudah Keluar (Belum Kembali)';
                                             }
                                         } elseif ($item->acc_security_in == 2) {
                                             $statusBadge = 'success';
@@ -712,6 +712,7 @@ class RequestKaryawanController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($item) use ($user) {
+                    Log::debug('Original Request Karyawan Item: ' . json_encode($item->toArray()));
                     $statusBadge = 'warning';
                     $text = 'Menunggu';
                     
@@ -722,7 +723,7 @@ class RequestKaryawanController extends Controller
                     } 
                     elseif($item->acc_hr_ga == 3) {
                         $statusBadge = 'danger';
-                        $text = 'Ditolak HR GA';
+                        $text = 'Ditolak HR/GA';
                     }
                     elseif($item->acc_security_out == 3) {
                         $statusBadge = 'danger';
@@ -739,7 +740,7 @@ class RequestKaryawanController extends Controller
                     }
                     elseif($item->acc_lead == 2 && $item->acc_hr_ga == 1) {
                         $statusBadge = 'warning';
-                        $text = 'Menunggu HR GA';
+                        $text = 'Menunggu HR/GA';
                     }
                     // Jika sudah disetujui Lead dan HR GA
                     elseif($item->acc_lead == 2 && $item->acc_hr_ga == 2) {
@@ -751,7 +752,7 @@ class RequestKaryawanController extends Controller
                                 $text = 'Hangus';
                             } else {
                                 $statusBadge = 'info';
-                                $text = 'Menunggu Security Keluar';
+                                $text = 'Disetujui (Belum Keluar)';
                             }
                         } elseif ($item->acc_security_out == 2) {
                             // Cek status security in
@@ -762,7 +763,7 @@ class RequestKaryawanController extends Controller
                                     $text = 'Terlambat';
                                 } else {
                                     $statusBadge = 'info';
-                                    $text = 'Menunggu Security Masuk';
+                                    $text = 'Sudah Keluar (Belum Kembali)';
                                 }
                             } elseif ($item->acc_security_in == 2) {
                                 $statusBadge = 'success';
@@ -771,7 +772,7 @@ class RequestKaryawanController extends Controller
                         }
                     }
 
-                    return [
+                    $mappedItem = [
                         'id' => $item->id,
                         'no_surat' => $item->no_surat ?? '-',
                         'nama' => $item->nama,
@@ -792,11 +793,81 @@ class RequestKaryawanController extends Controller
                         'user_role_title' => $user->role->title ?? '',
                         'departemen_id' => $item->departemen_id,
                     ];
+                    Log::debug('Mapped Request Karyawan Item: ' . json_encode($mappedItem));
+                    return $mappedItem;
                 });
 
             $data = array_merge($data, $requests->toArray());
         }
 
         return response()->json($data);
+    }
+
+    /**
+     * Export data permohonan karyawan ke PDF per item
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\Response
+     */
+    public function exportSinglePDF($id)
+    {
+        $requestKaryawan = RequestKaryawan::with('departemen')->find($id);
+
+        if (!$requestKaryawan) {
+            abort(404, 'Data Permohonan Karyawan tidak ditemukan.');
+        }
+
+        // Format data sesuai kebutuhan PDF
+        $data = [
+            'no_surat' => $requestKaryawan->no_surat,
+            'nama' => $requestKaryawan->nama,
+            'no_telp' => $requestKaryawan->no_telp,
+            'departemen' => $requestKaryawan->departemen->name,
+            'keperluan' => $requestKaryawan->keperluan,
+            'jam_out' => $requestKaryawan->jam_out,
+            'jam_in' => $requestKaryawan->jam_in,
+            'tanggal' => \Carbon\Carbon::parse($requestKaryawan->created_at)->format('Y-m-d'), // Menambahkan tanggal pengajuan
+        ];
+
+        // Logika untuk status persetujuan yang lebih detail
+        $statusLead = 'Menunggu';
+        if ($requestKaryawan->acc_lead == 2) {
+            $statusLead = 'Disetujui';
+        } elseif ($requestKaryawan->acc_lead == 3) {
+            $statusLead = 'Ditolak';
+        }
+
+        $statusHrGa = 'Menunggu';
+        if ($requestKaryawan->acc_hr_ga == 2) {
+            $statusHrGa = 'Disetujui';
+        } elseif ($requestKaryawan->acc_hr_ga == 3) {
+            $statusHrGa = 'Ditolak';
+        }
+
+        $statusSecurityOut = 'Belum Keluar';
+        if ($requestKaryawan->acc_security_out == 2) {
+            $statusSecurityOut = 'Sudah Keluar';
+        } elseif ($requestKaryawan->acc_security_out == 3) {
+            $statusSecurityOut = 'Ditolak Keluar';
+        }
+
+        $statusSecurityIn = 'Belum Kembali';
+        if ($requestKaryawan->acc_security_in == 2) {
+            $statusSecurityIn = 'Sudah Kembali';
+        } elseif ($requestKaryawan->acc_security_in == 3) {
+            $statusSecurityIn = 'Ditolak Kembali';
+        }
+
+        // Tambahkan status ke data
+        $data['status_lead'] = $statusLead;
+        $data['status_hr_ga'] = $statusHrGa;
+        $data['status_security_out'] = $statusSecurityOut;
+        $data['status_security_in'] = $statusSecurityIn;
+
+        $pdf = Pdf::loadView('exports.karyawan-single', compact('data'));
+        $pdf->setPaper('A4', 'portrait');
+        // Bersihkan karakter "/" dan "\" dari no_surat
+        $cleanNoSurat = str_replace(['/', '\\'], '-', $requestKaryawan->no_surat);
+        return $pdf->stream('surat_izin_karyawan_' . $cleanNoSurat . '.pdf');
     }
 }
